@@ -1,9 +1,9 @@
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function Contact() {
+export default function Cart() {
     return (
         <View style={styles.container}>
-            <Text>Welcome to the Contact Screen!</Text>
+            <Text>Welcome to the CartScreen!</Text>
         </View>
     );
 }

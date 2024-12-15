@@ -1,80 +1,87 @@
 import React from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Image } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
-export default function Navbar() {
+export default function Navbar({ isUpperNavbar = false, isLowerNavbar = false }) {
   const router = useRouter();
 
-  return (
-    <View style={styles.navbar}>
-      {/* Logo and Brand Name */}
-      <View style={styles.logoContainer}>
-        <Image
-          source={{ uri: "https://example.com/logo.png" }} // Replace with your logo URL
-          style={styles.logo}
-        />
-        <Text style={styles.logoText}>Jewel</Text>
-      </View>
+  const navigateTo = (path: string) => {
+    if (router && router.push) {
+      router.push(path);
+    } else {
+      console.warn("Navigation attempted before the router was ready");
+    }
+  };
 
-      {/* Navigation Buttons */}
-      <View style={styles.navItems}>
-        {/* Home */}
+  if (isUpperNavbar) {
+    return (
+      <View style={styles.topNavbar}>
+        {/* Logo and Logo Name */}
+        <View style={styles.logoContainer}>
+          <Image
+            source={require("../assets/images/favicon.png")} // Replace with the path to your logo image
+            style={styles.logo}
+          />
+          <Text style={styles.logoName}>MyApp</Text> {/* Replace "MyApp" with your app name */}
+        </View>
+
+        {/* Search Input */}
+        <TextInput
+          style={styles.searchInput}
+          placeholder="Search..."
+          placeholderTextColor="#888"
+        />
+
+        {/* Cart Icon */}
         <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/")}
+          style={styles.cartContainer}
+          onPress={() => navigateTo("/pages/Cart")}
         >
+          <Ionicons name="cart" size={24} color="#fff" />
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  if (isLowerNavbar) {
+    return (
+      <View style={styles.bottomNavbar}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigateTo("/")}>
           <Ionicons name="home-outline" size={24} color="#fff" />
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
 
-        {/* Profile */}
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => router.push("/pages/profile")}
+          onPress={() => navigateTo("/pages/profile")}
         >
           <Ionicons name="person-outline" size={24} color="#fff" />
           <Text style={styles.navText}>Profile</Text>
         </TouchableOpacity>
 
-        {/* About */}
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => router.push("/pages/about")}
+          onPress={() => navigateTo("/pages/Orders")}
         >
-          <Ionicons name="information-circle-outline" size={24} color="#fff" />
-          <Text style={styles.navText}>About</Text>
-        </TouchableOpacity>
-
-        {/* Contact */}
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => router.push("/pages/contact")}
-        >
-          <Ionicons name="call-outline" size={24} color="#fff" />
-          <Text style={styles.navText}>Contact</Text>
+          <Ionicons name="clipboard-outline" size={24} color="#fff" />
+          <Text style={styles.navText}>Orders</Text>
         </TouchableOpacity>
       </View>
+    );
+  }
 
-      {/* Signup/Login Button */}
-      <TouchableOpacity
-        style={styles.signupButton}
-        onPress={() => router.push("/pages/signup")}
-      >
-        <Text style={styles.signupText}>Signup/Login</Text>
-      </TouchableOpacity>
-    </View>
-  );
+  return null; // Return nothing if neither upper nor lower navbar is specified
 }
 
 const styles = StyleSheet.create({
-  navbar: {
+  topNavbar: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
+    justifyContent: "space-between",
     backgroundColor: "#333",
-    paddingVertical: 10,
     paddingHorizontal: 15,
+    paddingVertical: 10,
   },
   logoContainer: {
     flexDirection: "row",
@@ -85,35 +92,37 @@ const styles = StyleSheet.create({
     height: 30,
     marginRight: 8,
   },
-  logoText: {
+  logoName: {
     color: "#fff",
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: "bold",
   },
-  navItems: {
+  searchInput: {
+    flex: 1,
+    backgroundColor: "#444",
+    color: "#fff",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
+    marginLeft: 10,
+  },
+  cartContainer: {
+    marginLeft: 15,
+  },
+  bottomNavbar: {
     flexDirection: "row",
     justifyContent: "center",
-    alignItems: "center",
+    backgroundColor: "#333",
+    paddingVertical: 10,
   },
   navItem: {
     alignItems: "center",
-    marginHorizontal: 10,
+    marginHorizontal: 15,
   },
   navText: {
     color: "#fff",
     fontSize: 12,
     fontWeight: "bold",
     marginTop: 4,
-  },
-  signupButton: {
-    backgroundColor: "#ff6347",
-    paddingHorizontal: 15,
-    paddingVertical: 5,
-    borderRadius: 5,
-  },
-  signupText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "bold",
   },
 });

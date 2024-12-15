@@ -1,42 +1,32 @@
 import React from "react";
-import { Tabs } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+import { View, StyleSheet } from "react-native";
+import { Slot } from "expo-router";
 import Navbar from "../components/navbar"; // Updated path
 
 export default function Layout() {
   return (
-    <>
-      {/* Custom Navbar */}
-      <Navbar />
+    <View style={styles.container}>
+      {/* Upper Navbar */}
+      <Navbar isUpperNavbar />
 
-      {/* Tabs */}
-      <Tabs
-        screenOptions={({ route }) => ({
-          headerShown: false,
-          tabBarIcon: ({ focused, color, size }) => {
-            let iconName;
+      {/* Main Content (Slot) */}
+      <View style={styles.content}>
+        <Slot />
+      </View>
 
-            if (route.name === "index") {
-              iconName = focused ? "home" : "home-outline";
-            } else if (route.name === "profile") {
-              iconName = focused ? "person" : "person-outline";
-            } else if (route.name === "about") {
-              iconName = focused ? "information-circle" : "information-circle-outline";
-            } else if (route.name === "contact") {
-              iconName = focused ? "call" : "call-outline";
-            }
-
-            return <Ionicons Name={iconName} size={size} color={color} />;
-          },
-          tabBarActiveTintColor: "tomato",
-          tabBarInactiveTintColor: "gray",
-        })}
-      >
-        <Tabs.Screen name="index" options={{ title: "Home" }} />
-        <Tabs.Screen name="profile" options={{ title: "Profile" }} />
-        <Tabs.Screen name="about" options={{ title: "About" }} />
-        <Tabs.Screen name="contact" options={{ title: "Contact" }} />
-      </Tabs>
-    </>
+      {/* Lower Navbar */}
+      <Navbar isLowerNavbar />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#f5f5f5", // Background color for the layout
+  },
+  content: {
+    flex: 1, // Occupy remaining space
+    padding: 10, // Adjust padding around the content
+  },
+});

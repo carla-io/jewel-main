@@ -1,9 +1,9 @@
 import { View, Text, StyleSheet } from 'react-native';
 
-export default function Settings() {
+export default function Orders() {
     return (
         <View style={styles.container}>
-            <Text>Welcome to the Settings Screen!</Text>
+            <Text>Welcome to the orders Screen!</Text>
         </View>
     );
 }
