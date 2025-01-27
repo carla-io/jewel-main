@@ -20,7 +20,7 @@ export default function ProductListScreen() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch("http://localhost:4000/api/auth/product/get");
+        const response = await fetch("http://192.168.100.171:4000/api/auth/product/get");
         const data = await response.json();
         if (data.success) {
           setProducts(data.products);
