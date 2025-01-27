@@ -1,11 +1,13 @@
+/** @type {import('tailwindcss').Config} */
 module.exports = {
-    content: [
-      "./App.tsx",  // add your main files here, for example if using Expo or React Native
-      "./src/**/*.{ts,tsx}",
-    ],
-    theme: {
-      extend: {},
-    },
-    plugins: [],
-  };
-  
+  content: [
+    "./App.{js,jsx,ts,tsx}",
+    "./components/**/*.{js,jsx,ts,tsx}",
+    "./screens/**/*.{js,jsx,ts,tsx}",
+  ],
+  theme: {
+    extend: {},
+  },
+  plugins: [],
+}
+
