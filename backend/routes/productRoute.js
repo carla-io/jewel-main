@@ -7,10 +7,10 @@ const { newProduct,
     updateProduct,
     deleteProduct } = require('../controllers/productController')
 
-router.post('/product/new',  upload.array('images', 10), newProduct);
-router.get('/product/get', getProducts);
-router.get('/product/:id', getSingleProduct);
-router.put('/product/update/:id', upload.array('images', 10), updateProduct);
-router.delete('/product/delete/:id', deleteProduct);
+router.post('/new',  upload.array('images', 10), newProduct);
+router.get('/get', getProducts);
+router.get('/:id', getSingleProduct);
+router.put('/update/:id', upload.array('images', 10), updateProduct);
+router.delete('/delete/:id', deleteProduct);
 
 module.exports = router;

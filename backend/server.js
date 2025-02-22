@@ -4,6 +4,7 @@ const cors = require('cors');
 const dotenv = require("dotenv").config();
 const app = express();
 const products = require('./routes/productRoute');
+const user = require('./routes/authRoutes');
 
 app.use(cors());
 app.use(express.json());
@@ -16,5 +17,6 @@ app.listen(4000, "0.0.0.0", () => {
     console.log("Server running on port 4000");
   });
 
-app.use('/api/auth', products);
+app.use('/api/product', products);
+app.use('/api/auth', user);
 

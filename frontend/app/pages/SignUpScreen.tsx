@@ -1,108 +1,113 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image } from "react-native";
-import { useRouter } from "expo-router"; // Import useRouter
-import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker"; // Import ImagePicker
+import { View, Text, TextInput, TouchableOpacity, Image, Alert, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
+import axios from "axios";
 
 export default function SignUpScreen() {
-  const router = useRouter(); // Initialize useRouter hook
-  const [email, setEmail] = useState<string>("");
-  const [password, setPassword] = useState<string>("");
-  const [confirmPassword, setConfirmPassword] = useState<string>("");
-  const [profileImage, setProfileImage] = useState<string | null>(null); // State to store image URI
+  const router = useRouter();
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [user, setUser] = useState({ username: "", email: "", password: "" });
+  const [profileImage, setProfileImage] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
-  // Request camera roll permission on component mount
   useEffect(() => {
     const requestPermissions = async () => {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
-        alert("Sorry, we need camera roll permissions to make this work!");
+        alert("Camera roll permissions are required!");
       }
     };
-
     requestPermissions();
   }, []);
 
-  const handleSignUp = () => {
-    if (!email || !password || !confirmPassword) {
-      Alert.alert("Error", "Please fill in all fields.");
-    } else if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match.");
-    } else {
-      // Perform sign-up logic here
-      console.log("Signing up with:", email, password, profileImage);
+  const handlePickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+      });
+      if (!result.canceled && result.assets.length > 0) {
+        setProfileImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error("Image selection error:", error);
     }
   };
 
-  // Function to launch the image picker
-  const pickImage = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1], // Optionally, specify aspect ratio
-      quality: 1, // Image quality
-    });
-
-    if (!result.canceled) {
-      setProfileImage(result.uri); // Store the image URI
+  const handleSubmit = async () => {
+    console.log("Sending data:", user.email, user.password); // Debugging
+  
+    try {
+      const url = isRegistering
+        ? "http://192.168.175.237:4000/api/auth/register"
+        : "http://192.168.175.237:4000/api/auth/login";
+  
+      const requestData = isRegistering
+        ? { username: user.username, email: user.email, password: user.password }
+        : { email: user.email, password: user.password };
+  
+      const response = await axios.post(url, requestData, {
+        headers: { "Content-Type": "application/json" }, // Send JSON instead of FormData
+      });
+  
+      console.log("Response:", response.data);
+      Alert.alert("Success", isRegistering ? "Registration successful!" : "Login successful!");
+      if (!isRegistering) router.push("/");
+    } catch (error) {
+      console.error("Error:", error.response?.data);
+      setError(error.response?.data?.message || "Something went wrong");
     }
   };
+  
+  
+  
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Sign Up</Text>
-
-      {/* Profile Image Picker */}
-      <View style={styles.imagePickerContainer}>
-        {profileImage ? (
-          <Image source={{ uri: profileImage }} style={styles.profileImage} />
-        ) : (
-          <Text style={styles.imagePlaceholder}>Select Profile Picture</Text>
-        )}
-        <TouchableOpacity style={styles.imagePickerButton} onPress={pickImage}>
-          <Text style={styles.imagePickerText}>Choose Image</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Email Input */}
+      <Text style={styles.title}>{isRegistering ? "Sign Up" : "Login"}</Text>
+      {isRegistering && (
+        <>
+          <TextInput
+            style={styles.input}
+            placeholder="Your name"
+            value={user.username}
+            onChangeText={(text) => setUser({ ...user, username: text })}
+          />
+          <TouchableOpacity style={styles.imagePicker} onPress={handlePickImage}>
+            {profileImage ? (
+              <Image source={{ uri: profileImage }} style={styles.profileImage} />
+            ) : (
+              <Text style={styles.imagePlaceholder}>Choose Profile Picture</Text>
+            )}
+          </TouchableOpacity>
+        </>
+      )}
       <TextInput
         style={styles.input}
         placeholder="Email"
         keyboardType="email-address"
-        value={email}
-        onChangeText={setEmail}
+        value={user.email}
+        onChangeText={(text) => setUser({ ...user, email: text })}
       />
-
-      {/* Password Input */}
       <TextInput
         style={styles.input}
         placeholder="Password"
         secureTextEntry
-        value={password}
-        onChangeText={setPassword}
+        value={user.password}
+        onChangeText={(text) => setUser({ ...user, password: text })}
       />
-
-      {/* Confirm Password Input */}
-      <TextInput
-        style={styles.input}
-        placeholder="Confirm Password"
-        secureTextEntry
-        value={confirmPassword}
-        onChangeText={setConfirmPassword}
-      />
-
-      {/* Sign Up Button */}
-      <TouchableOpacity style={styles.button} onPress={handleSignUp}>
-        <Text style={styles.buttonText}>Sign Up</Text>
+      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+        <Text style={styles.buttonText}>{isRegistering ? "Sign Up" : "Login"}</Text>
       </TouchableOpacity>
-
-      {/* Login Link */}
-      <View style={styles.loginContainer}>
-        <Text style={styles.loginText}>Already have an account? </Text>
-        <TouchableOpacity onPress={() => router.push("/pages/LoginScreen")}>
-          <Text style={styles.loginLink}>Log In</Text>
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity onPress={() => setIsRegistering(!isRegistering)}>
+        <Text style={styles.toggleText}>
+          {isRegistering ? "Already have an account? Login" : "Don't have an account? Sign Up"}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -115,35 +120,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: "bold",
     textAlign: "center",
-    marginBottom: 30,
-  },
-  imagePickerContainer: {
-    alignItems: "center",
     marginBottom: 20,
-  },
-  profileImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50, // Circular image
-    marginBottom: 10,
-  },
-  imagePlaceholder: {
-    fontSize: 16,
-    color: "#888",
-  },
-  imagePickerButton: {
-    backgroundColor: "#f56a79",
-    paddingVertical: 8,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  imagePickerText: {
-    color: "#fff",
-    fontWeight: "bold",
   },
   input: {
     height: 50,
@@ -154,28 +134,41 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     fontSize: 16,
   },
+  imagePicker: {
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  imagePlaceholder: {
+    fontSize: 16,
+    color: "#888",
+    textAlign: "center",
+  },
   button: {
     backgroundColor: "#f56a79",
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: "center",
+    marginTop: 10,
   },
   buttonText: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
   },
-  loginContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 20,
+  error: {
+    color: "red",
+    textAlign: "center",
+    marginBottom: 10,
   },
-  loginText: {
+  toggleText: {
     fontSize: 16,
-  },
-  loginLink: {
-    fontSize: 16,
-    fontWeight: "bold",
     color: "#f56a79",
+    textAlign: "center",
+    marginTop: 15,
   },
 });

@@ -61,7 +61,7 @@ export default function Navbar({ isUpperNavbar = false, isLowerNavbar = false })
 
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => navigateTo("/pages/UserProfile")}
+          onPress={() => navigateTo("/pages/SignUpScreen")}
         >
           <Ionicons name="person-outline" size={24} color="#000" />
           <Text style={styles.navText}>Profile</Text>
