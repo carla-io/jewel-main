@@ -1,165 +1,165 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Image, ScrollView, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, TextInput, Image } from "react-native";
+import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-interface Product {
-  _id: string;
-  name: string;
-  images: { public_id: string; url: string }[];
-  category: string;
-  price: number;
-  description: string;
-  createdAt: string;
-}
+export default function Navbar({ isUpperNavbar = false, isLowerNavbar = false }) {
+  const router = useRouter();
+  const [user, setUser] = useState(null);
 
-export default function ProductListScreen() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-
+  // Fetch user from AsyncStorage
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const response = await fetch("http://192.168.175.237:4000/api/product/get");
-        const data = await response.json();
-        if (data.success) {
-          setProducts(data.products);
-        }
-      } catch (error) {
-        console.error("Error fetching products:", error);
-      } finally {
-        setLoading(false);
+    const fetchUser = async () => {
+      const storedUser = await AsyncStorage.getItem("user");
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
       }
     };
-
-    fetchProducts();
+    fetchUser();
   }, []);
 
-  if (loading) {
+  // Logout Function
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem("user"); // Remove user from storage
+    setUser(null); // Update state
+    router.push("/pages/SignUpScreen"); // Redirect to login
+  };
+
+  const navigateTo = (path: string) => {
+    if (router && router.push) {
+      router.push(path);
+    } else {
+      console.warn("Navigation attempted before the router was ready");
+    }
+  };
+
+  if (isUpperNavbar) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#f56a79" />
+      <LinearGradient colors={["#ffffff", "#ffffff"]} style={styles.topNavbar}>
+        {/* Logo */}
+        <View style={styles.logoContainer}>
+          <Image source={require("../assets/images/logo.png")} style={styles.logo} />
+          <Text style={styles.logoName}>Jewel</Text>
+        </View>
+
+        {/* Search Input */}
+        <View style={styles.searchContainer}>
+          <Ionicons name="search-outline" size={18} color="#888" style={styles.searchIcon} />
+          <TextInput style={styles.searchInput} placeholder="Search..." placeholderTextColor="#aaa" />
+        </View>
+
+        {/* Cart Icon */}
+        <TouchableOpacity style={styles.cartContainer} onPress={() => navigateTo("/pages/Cart")}>
+          <Ionicons name="cart-outline" size={28} color="#000" />
+        </TouchableOpacity>
+      </LinearGradient>
+    );
+  }
+
+  if (isLowerNavbar) {
+    return (
+      <View style={styles.bottomNavbar}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigateTo("/")}>
+          <Ionicons name="home-outline" size={24} color="#000" />
+          <Text style={styles.navText}>Home</Text>
+        </TouchableOpacity>
+
+        {/* Show Profile if logged in, else show Login */}
+        {user ? (
+          <TouchableOpacity style={styles.navItem} onPress={() => navigateTo("/pages/Profile")}>
+            <Ionicons name="person-outline" size={24} color="#000" />
+            <Text style={styles.navText}>Profile</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.navItem} onPress={() => navigateTo("/pages/SignUpScreen")}>
+            <Ionicons name="log-in-outline" size={24} color="#000" />
+            <Text style={styles.navText}>Login</Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity style={styles.navItem} onPress={() => navigateTo("/pages/Orders")}>
+          <Ionicons name="clipboard-outline" size={24} color="#000" />
+          <Text style={styles.navText}>Orders</Text>
+        </TouchableOpacity>
+
+        {/* Logout Button (Visible if logged in) */}
+        {user && (
+          <TouchableOpacity style={styles.navItem} onPress={handleLogout}>
+            <Ionicons name="log-out-outline" size={24} color="red" />
+            <Text style={[styles.navText, { color: "red" }]}>Logout</Text>
+          </TouchableOpacity>
+        )}
       </View>
     );
   }
 
-  // Group products by category
-  const groupedProducts = products.reduce((acc: { [key: string]: Product[] }, product) => {
-    if (!acc[product.category]) acc[product.category] = [];
-    acc[product.category].push(product);
-    return acc;
-  }, {});
-
-  return (
-    <ScrollView style={styles.container}>
-      {/* Hero Banner */}
-      <LinearGradient colors={["#f5c6cb", "#fad1e1"]} style={styles.heroBanner}>
-        <Text style={styles.heroTitle}>Discover Our Latest Products</Text>
-        <TouchableOpacity style={styles.shopNowBtn}>
-          <Text style={styles.shopNowText}>Shop Now</Text>
-        </TouchableOpacity>
-      </LinearGradient>
-
-      {/* Products by Category */}
-      {Object.keys(groupedProducts).map((category) => (
-        <View key={category} style={styles.categorySection}>
-          <Text style={styles.sectionTitle}>{category}</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {groupedProducts[category].map((product) => (
-              <View key={product._id} style={styles.productCard}>
-                <Image source={{ uri: product.images[0]?.url }} style={styles.productImage} />
-                <Text style={styles.productName}>{product.name}</Text>
-                <Text style={styles.productPrice}>${product.price.toFixed(2)}</Text>
-                <TouchableOpacity style={styles.productBtn}>
-                  <Ionicons name="cart-outline" size={20} color="#fff" />
-                  <Text style={styles.productBtnText}>Add to Cart</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-      ))}
-    </ScrollView>
-  );
+  return null;
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
+  topNavbar: {
+    flexDirection: "row",
     alignItems: "center",
-  },
-  heroBanner: {
-    padding: 30,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  heroTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#fff",
-    textAlign: "center",
-  },
-  shopNowBtn: {
-    marginTop: 20,
-    paddingVertical: 10,
-    paddingHorizontal: 30,
-    backgroundColor: "#f56a79",
-    borderRadius: 25,
-  },
-  shopNowText: {
-    color: "#fff",
-    fontSize: 18,
-  },
-  categorySection: {
-    marginVertical: 20,
+    justifyContent: "space-between",
     paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: "#ffffff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#ddd",
   },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#333",
-    marginBottom: 10,
-  },
-  productCard: {
-    marginRight: 15,
-    alignItems: "center",
-    backgroundColor: "#f4f4f4",
-    padding: 15,
-    borderRadius: 8,
-    width: 180,
-    elevation: 5,
-  },
-  productImage: {
-    width: 150,
-    height: 150,
-    borderRadius: 8,
-  },
-  productName: {
-    fontSize: 16,
-    fontWeight: "bold",
-    marginVertical: 10,
-    textAlign: "center",
-  },
-  productPrice: {
-    fontSize: 14,
-    color: "#f56a79",
-  },
-  productBtn: {
-    marginTop: 10,
-    backgroundColor: "#f56a79",
-    paddingVertical: 5,
-    paddingHorizontal: 10,
-    borderRadius: 5,
+  logoContainer: {
     flexDirection: "row",
     alignItems: "center",
   },
-  productBtnText: {
-    color: "#fff",
-    marginLeft: 5,
+  logo: {
+    width: 30,
+    height: 30,
+    marginRight: 8,
+    borderRadius: 15,
+  },
+  logoName: {
+    color: "#000",
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+  searchContainer: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f4f4f4",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    marginLeft: 10,
+  },
+  searchIcon: {
+    marginRight: 5,
+  },
+  searchInput: {
+    flex: 1,
+    color: "#000",
+    fontSize: 16,
+  },
+  cartContainer: {
+    marginLeft: 15,
+  },
+  bottomNavbar: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    backgroundColor: "#ffffff",
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#ddd",
+  },
+  navItem: {
+    alignItems: "center",
+  },
+  navText: {
+    color: "#000",
+    fontSize: 12,
+    fontWeight: "bold",
+    marginTop: 4,
   },
 });
+

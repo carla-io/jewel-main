@@ -1,11 +1,24 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, TextInput, Image } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function Navbar({ isUpperNavbar = false, isLowerNavbar = false }) {
   const router = useRouter();
+  const [user, setUser] = useState(null);
+
+  // Check if user is logged in
+  useEffect(() => {
+    const fetchUser = async () => {
+      const storedUser = await AsyncStorage.getItem("user");
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
+    };
+    fetchUser();
+  }, []);
 
   const navigateTo = (path: string) => {
     if (router && router.push) {
@@ -17,34 +30,21 @@ export default function Navbar({ isUpperNavbar = false, isLowerNavbar = false })
 
   if (isUpperNavbar) {
     return (
-      <LinearGradient
-        colors={["#ffffff", "#ffffff"]} // White background for the top navbar
-        style={styles.topNavbar}
-      >
-        {/* Logo and Logo Name */}
+      <LinearGradient colors={["#ffffff", "#ffffff"]} style={styles.topNavbar}>
+        {/* Logo */}
         <View style={styles.logoContainer}>
-          <Image
-            source={require("../assets/images/logo.png")} // Replace with the path to your logo
-            style={styles.logo}
-          />
-          <Text style={styles.logoName}>Jewel</Text> {/* Replace "MyApp" with your app name */}
+          <Image source={require("../assets/images/logo.png")} style={styles.logo} />
+          <Text style={styles.logoName}>Jewel</Text>
         </View>
 
         {/* Search Input */}
         <View style={styles.searchContainer}>
           <Ionicons name="search-outline" size={18} color="#888" style={styles.searchIcon} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search..."
-            placeholderTextColor="#aaa"
-          />
+          <TextInput style={styles.searchInput} placeholder="Search..." placeholderTextColor="#aaa" />
         </View>
 
         {/* Cart Icon */}
-        <TouchableOpacity
-          style={styles.cartContainer}
-          onPress={() => navigateTo("/pages/Cart")}
-        >
+        <TouchableOpacity style={styles.cartContainer} onPress={() => navigateTo("/pages/Cart")}>
           <Ionicons name="cart-outline" size={28} color="#000" />
         </TouchableOpacity>
       </LinearGradient>
@@ -59,18 +59,20 @@ export default function Navbar({ isUpperNavbar = false, isLowerNavbar = false })
           <Text style={styles.navText}>Home</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigateTo("/pages/SignUpScreen")}
-        >
-          <Ionicons name="person-outline" size={24} color="#000" />
-          <Text style={styles.navText}>Profile</Text>
-        </TouchableOpacity>
+        {/* Show Login/Signup if no user, else show Profile */}
+        {user ? (
+          <TouchableOpacity style={styles.navItem} onPress={() => navigateTo("/pages/UserProfile")}>
+            <Ionicons name="person-outline" size={24} color="#000" />
+            <Text style={styles.navText}>Profile</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.navItem} onPress={() => navigateTo("/pages/SignUpScreen")}>
+            <Ionicons name="log-in-outline" size={24} color="#000" />
+            <Text style={styles.navText}>Login</Text>
+          </TouchableOpacity>
+        )}
 
-        <TouchableOpacity
-          style={styles.navItem}
-          onPress={() => navigateTo("/pages/Orders")}
-        >
+        <TouchableOpacity style={styles.navItem} onPress={() => navigateTo("/pages/Orders")}>
           <Ionicons name="clipboard-outline" size={24} color="#000" />
           <Text style={styles.navText}>Orders</Text>
         </TouchableOpacity>
@@ -78,7 +80,7 @@ export default function Navbar({ isUpperNavbar = false, isLowerNavbar = false })
     );
   }
 
-  return null; // Return nothing if neither upper nor lower navbar is specified
+  return null;
 }
 
 const styles = StyleSheet.create({
@@ -88,9 +90,9 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: "#ffffff", // White background
+    backgroundColor: "#ffffff",
     borderBottomWidth: 1,
-    borderBottomColor: "#ddd", // Light grey border for separation
+    borderBottomColor: "#ddd",
   },
   logoContainer: {
     flexDirection: "row",
@@ -100,10 +102,10 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     marginRight: 8,
-    borderRadius: 15, // Makes the logo circular if it's square
+    borderRadius: 15,
   },
   logoName: {
-    color: "#000", // Black text for the logo name
+    color: "#000",
     fontSize: 20,
     fontWeight: "bold",
   },
@@ -111,7 +113,7 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#f4f4f4", // Light grey background for search input
+    backgroundColor: "#f4f4f4",
     borderRadius: 10,
     paddingHorizontal: 10,
     marginLeft: 10,
@@ -121,7 +123,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: "#000", // Black text for search input
+    color: "#000",
     fontSize: 16,
   },
   cartContainer: {
@@ -130,16 +132,16 @@ const styles = StyleSheet.create({
   bottomNavbar: {
     flexDirection: "row",
     justifyContent: "space-around",
-    backgroundColor: "#ffffff", // White background for bottom navbar
+    backgroundColor: "#ffffff",
     paddingVertical: 10,
     borderTopWidth: 1,
-    borderTopColor: "#ddd", // Light grey border for separation
+    borderTopColor: "#ddd",
   },
   navItem: {
     alignItems: "center",
   },
   navText: {
-    color: "#000", // Black text for nav items
+    color: "#000",
     fontSize: 12,
     fontWeight: "bold",
     marginTop: 4,

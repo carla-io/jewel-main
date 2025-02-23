@@ -3,6 +3,8 @@ import { View, Text, TextInput, TouchableOpacity, Image, Alert, StyleSheet } fro
 import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -42,8 +44,8 @@ export default function SignUpScreen() {
   
     try {
       const url = isRegistering
-        ? "http://192.168.175.237:4000/api/auth/register"
-        : "http://192.168.175.237:4000/api/auth/login";
+        ? "http://192.168.100.171:4000/api/auth/register"
+        : "http://192.168.100.171:4000/api/auth/login";
   
       const requestData = isRegistering
         ? { username: user.username, email: user.email, password: user.password }
@@ -54,11 +56,53 @@ export default function SignUpScreen() {
       });
   
       console.log("Response:", response.data);
+  
+      // ✅ Save user data to AsyncStorage
+      await AsyncStorage.setItem("user", JSON.stringify(response.data.user));
+      await AsyncStorage.setItem("token", response.data.token);
+  
       Alert.alert("Success", isRegistering ? "Registration successful!" : "Login successful!");
-      if (!isRegistering) router.push("/");
+  
+      if (!isRegistering) {
+        router.push("/pages/UserProfile");
+      }
     } catch (error) {
       console.error("Error:", error.response?.data);
       setError(error.response?.data?.message || "Something went wrong");
+    }
+  };
+  
+  const loadUserData = async () => {
+    try {
+      const userData = await AsyncStorage.getItem("user");
+      const token = await AsyncStorage.getItem("token");
+  
+      if (userData) {
+        console.log("User Data:", JSON.parse(userData));
+      }
+  
+      if (token) {
+        console.log("User Token:", token);
+      }
+    } catch (error) {
+      console.error("Failed to load user data:", error);
+    }
+  };
+  
+  // Call loadUserData when the component mounts
+  useEffect(() => {
+    loadUserData();
+  }, []);
+  
+
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem("user");
+      await AsyncStorage.removeItem("token");
+      Alert.alert("Logged out", "You have been successfully logged out!");
+      router.push("/pages/SignUpScreen"); // Redirect to login screen
+    } catch (error) {
+      console.error("Logout error:", error);
     }
   };
   
