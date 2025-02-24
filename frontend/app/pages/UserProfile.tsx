@@ -9,6 +9,7 @@ import axios from "axios";
 import { useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
+import { useCallback } from "react";
 
 export default function UserProfile() {
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -22,25 +23,43 @@ export default function UserProfile() {
 
   useEffect(() => {
     const fetchUser = async () => {
-      const token = await AsyncStorage.getItem("token");
-      if (!token) {
-        navigation.reset({ index: 0, routes: [{ name: "SignupScreen" }] });
-        return;
-      }
-
+      setLoading(true); // Set loading state
       try {
-        const response = await axios.post("http://192.168.100.171:4000/api/auth/user", { token });
+        const token = await AsyncStorage.getItem("token");
+        if (!token) {
+          navigation.reset({ index: 0, routes: [{ name: "SignupScreen" }] });
+          return;
+        }
+  
+        // Set a timeout to prevent infinite waiting
+        const source = axios.CancelToken.source();
+        const timeout = setTimeout(() => {
+          source.cancel("Request timed out.");
+        }, 5000); // 5-second timeout
+  
+        const response = await axios.post(
+          "http://192.168.175.237:4000/api/auth/user",
+          { token },
+          { cancelToken: source.token }
+        );
+  
+        clearTimeout(timeout); // Clear timeout when request succeeds
+  
         setUserName(response.data.user.username);
         setUserEmail(response.data.user.email);
         setProfileImage(response.data.user.profilePicture?.url || null);
         setUserId(response.data.user._id);
       } catch (err) {
-        Toast.show({ type: "error", text1: "Error", text2: "Failed to fetch user data" });
+        if (axios.isCancel(err)) {
+          console.error("Request cancelled:", err.message);
+        } else {
+          Toast.show({ type: "error", text1: "Error", text2: "Failed to fetch user data" });
+        }
       } finally {
         setLoading(false);
       }
     };
-
+  
     fetchUser();
   }, []);
 
@@ -81,7 +100,7 @@ export default function UserProfile() {
 
     try {
       const response = await axios.put(
-        `http://192.168.100.171:4000/api/auth/update-profile/${userId}`,
+        `http://192.168.175.237:4000/api/auth/update-profile/${userId}`,
         formData,
         {
           headers: {

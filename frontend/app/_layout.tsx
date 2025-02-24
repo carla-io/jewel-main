@@ -1,32 +1,32 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Text } from "react-native";
 import { Slot } from "expo-router";
-import Navbar from "../components/navbar"; // Updated path
+import Navbar from "../components/navbar";
+import { UserProvider } from "../context/UserContext";
 
 export default function Layout() {
   return (
-    <View style={styles.container}>
-      {/* Upper Navbar */}
-      <Navbar isUpperNavbar />
+    <UserProvider>
+      <View style={styles.container}>
+        <Navbar isUpperNavbar />
 
-      {/* Main Content (Slot) */}
-      <View style={styles.content}>
-        <Slot />
+        <View style={styles.content}>
+          <Slot />
+        </View>
+
+        <Navbar isLowerNavbar />
       </View>
-
-      {/* Lower Navbar */}
-      <Navbar isLowerNavbar />
-    </View>
+    </UserProvider>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f5f5f5", // Background color for the layout
+    backgroundColor: "#f5f5f5",
   },
   content: {
-    flex: 1, // Occupy remaining space
-    padding: 10, // Adjust padding around the content
+    flex: 1,
+    padding: 10,
   },
 });

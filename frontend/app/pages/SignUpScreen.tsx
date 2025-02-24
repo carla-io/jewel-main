@@ -5,7 +5,6 @@ import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-
 export default function SignUpScreen() {
   const router = useRouter();
   const [isRegistering, setIsRegistering] = useState(false);
@@ -21,7 +20,26 @@ export default function SignUpScreen() {
       }
     };
     requestPermissions();
+
+    // ✅ Check if user is already logged in
+    checkLoggedInUser();
   }, []);
+
+  const checkLoggedInUser = async () => {
+    try {
+      const userData = await AsyncStorage.getItem("user");
+      if (userData) {
+        const parsedUser = JSON.parse(userData);
+        if (parsedUser.role === "admin") {
+          router.replace("/pages/admin/AdminDashboard");
+        } else {
+          router.replace("/pages/UserProfile");
+        }
+      }
+    } catch (error) {
+      console.error("Error checking logged-in user:", error);
+    }
+  };
 
   const handlePickImage = async () => {
     try {
@@ -31,8 +49,11 @@ export default function SignUpScreen() {
         aspect: [1, 1],
         quality: 1,
       });
-      if (!result.canceled && result.assets.length > 0) {
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
         setProfileImage(result.assets[0].uri);
+      } else {
+        console.log("No image selected");
       }
     } catch (error) {
       console.error("Image selection error:", error);
@@ -44,27 +65,49 @@ export default function SignUpScreen() {
   
     try {
       const url = isRegistering
-        ? "http://192.168.100.171:4000/api/auth/register"
-        : "http://192.168.100.171:4000/api/auth/login";
+        ? "http://192.168.175.237:4000/api/auth/register"
+        : "http://192.168.175.237:4000/api/auth/login";
   
-      const requestData = isRegistering
-        ? { username: user.username, email: user.email, password: user.password }
-        : { email: user.email, password: user.password };
+      let requestData;
+  
+      if (isRegistering) {
+        const formData = new FormData();
+        formData.append("username", user.username);
+        formData.append("email", user.email);
+        formData.append("password", user.password);
+  
+        if (profileImage) {
+          formData.append("profilePicture", {
+            uri: profileImage,
+            name: "profile.jpg",
+            type: "image/jpeg",
+          });
+        }
+  
+        requestData = formData;
+      } else {
+        requestData = { email: user.email, password: user.password };
+      }
   
       const response = await axios.post(url, requestData, {
-        headers: { "Content-Type": "application/json" }, // Send JSON instead of FormData
+        headers: {
+          "Content-Type": isRegistering ? "multipart/form-data" : "application/json",
+        },
       });
   
       console.log("Response:", response.data);
   
-      // ✅ Save user data to AsyncStorage
       await AsyncStorage.setItem("user", JSON.stringify(response.data.user));
       await AsyncStorage.setItem("token", response.data.token);
   
       Alert.alert("Success", isRegistering ? "Registration successful!" : "Login successful!");
   
       if (!isRegistering) {
-        router.push("/pages/UserProfile");
+        if (response.data.user.role === "admin") {
+          router.replace("/pages/admin/AdminDashboard");
+        } else {
+          router.replace("/pages/UserProfile");
+        }
       }
     } catch (error) {
       console.error("Error:", error.response?.data);
@@ -72,42 +115,15 @@ export default function SignUpScreen() {
     }
   };
   
-  const loadUserData = async () => {
-    try {
-      const userData = await AsyncStorage.getItem("user");
-      const token = await AsyncStorage.getItem("token");
-  
-      if (userData) {
-        console.log("User Data:", JSON.parse(userData));
-      }
-  
-      if (token) {
-        console.log("User Token:", token);
-      }
-    } catch (error) {
-      console.error("Failed to load user data:", error);
-    }
-  };
-  
-  // Call loadUserData when the component mounts
-  useEffect(() => {
-    loadUserData();
-  }, []);
-  
-
   const handleLogout = async () => {
     try {
-      await AsyncStorage.removeItem("user");
-      await AsyncStorage.removeItem("token");
+      await AsyncStorage.clear();
       Alert.alert("Logged out", "You have been successfully logged out!");
-      router.push("/pages/SignUpScreen"); // Redirect to login screen
+      router.replace("/pages/SignUpScreen"); // Redirect to login screen
     } catch (error) {
       console.error("Logout error:", error);
     }
   };
-  
-  
-  
 
   return (
     <View style={styles.container}>
