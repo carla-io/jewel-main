@@ -48,7 +48,7 @@ export default function Navbar({ isUpperNavbar = false, isLowerNavbar = false })
   if (isLowerNavbar) {
     return (
       <View style={styles.bottomNavbar}>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigateTo(isAdmin ? "/pages/admin/Dashboard" : "/")}>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigateTo(isAdmin ? "/pages/admin/AdminDashboard" : "/")}>
           <Ionicons name="home-outline" size={24} color="#000" />
           <Text style={styles.navText}>{isAdmin ? "Dashboard" : "Home"}</Text>
         </TouchableOpacity>
@@ -56,7 +56,7 @@ export default function Navbar({ isUpperNavbar = false, isLowerNavbar = false })
         {/* Admin Only Items */}
         {isAdmin ? (
           <>
-            <TouchableOpacity style={styles.navItem} onPress={() => navigateTo("/pages/Products")}>
+            <TouchableOpacity style={styles.navItem} onPress={() => navigateTo("/pages/admin/Products")}>
               <Ionicons name="cube-outline" size={24} color="#000" />
               <Text style={styles.navText}>Products</Text>
             </TouchableOpacity>

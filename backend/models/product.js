@@ -24,9 +24,9 @@ const Product = mongoose.models.Product || mongoose.model('Product', new mongoos
         required: [true, 'Please enter the product category'],
         enum: {
             values: [
-                'Skincare',
-                'MakeUp',
-                'Fragrances'
+                'Necklaces',
+                'Earrings',
+                'Bracelets'
             ],
             message: 'Please select correct category for product'
         }
