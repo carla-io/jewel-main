@@ -4,14 +4,15 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { UserContext } from "../context/UserContext";
+import { CartContext } from "../context/CartContext"; // ✅ Import Cart Context
 
 export default function Navbar({ isUpperNavbar = false, isLowerNavbar = false }) {
   const router = useRouter();
   const { user } = useContext(UserContext);
+  const { cart } = useContext(CartContext); // ✅ Get cart state
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    // Ensure user.role updates dynamically
     if (user) {
       setIsAdmin(user.role === "admin");
     } else {
@@ -38,8 +39,14 @@ export default function Navbar({ isUpperNavbar = false, isLowerNavbar = false })
           <Ionicons name="search-outline" size={18} color="#888" style={styles.searchIcon} />
           <TextInput style={styles.searchInput} placeholder="Search..." placeholderTextColor="#aaa" />
         </View>
+        {/* ✅ Cart Icon with Badge */}
         <TouchableOpacity style={styles.cartContainer} onPress={() => navigateTo("/pages/Cart")}>
           <Ionicons name="cart-outline" size={28} color="#000" />
+          {cart.length > 0 && ( // ✅ Show badge only if there are items
+            <View style={styles.cartBadge}>
+              <Text style={styles.cartBadgeText}>{cart.length}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </LinearGradient>
     );
@@ -83,6 +90,7 @@ export default function Navbar({ isUpperNavbar = false, isLowerNavbar = false })
 
   return null;
 }
+
 const styles = StyleSheet.create({
   topNavbar: {
     flexDirection: "row",
@@ -127,7 +135,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   cartContainer: {
+    position: "relative",
     marginLeft: 15,
+  },
+  cartBadge: {
+    position: "absolute",
+    top: -5,
+    right: -10,
+    backgroundColor: "red",
+    borderRadius: 10,
+    width: 18,
+    height: 18,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cartBadgeText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "bold",
   },
   bottomNavbar: {
     flexDirection: "row",
@@ -147,4 +172,3 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
 });
-

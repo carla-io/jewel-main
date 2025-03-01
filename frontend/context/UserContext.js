@@ -36,8 +36,11 @@ export const UserProvider = ({ children }) => {
     return () => clearInterval(interval); // Cleanup on unmount
   }, []);
 
+  // ✅ New Function: Get unique cart key for the logged-in user
+  const getCartKey = () => (user ? `cart_${user.id}` : "cart_guest");
+
   return (
-    <UserContext.Provider value={{ user, setUser }}>
+    <UserContext.Provider value={{ user, setUser, getCartKey }}>
       {children}
     </UserContext.Provider>
   );

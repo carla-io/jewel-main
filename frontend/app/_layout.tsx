@@ -1,21 +1,26 @@
 import React from "react";
-import { View, StyleSheet, Text } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { Slot } from "expo-router";
 import Navbar from "../components/navbar";
 import { UserProvider } from "../context/UserContext";
+import { CartProvider } from "../context/CartContext";
+import Toast from "react-native-toast-message"; // ✅ Import Toast
 
 export default function Layout() {
   return (
     <UserProvider>
-      <View style={styles.container}>
-        <Navbar isUpperNavbar />
+      <CartProvider>
+        <View style={styles.container}>
+          <Navbar isUpperNavbar />
 
-        <View style={styles.content}>
-          <Slot />
+          <View style={styles.content}>
+            <Slot />
+          </View>
+
+          <Navbar isLowerNavbar />
         </View>
-
-        <Navbar isLowerNavbar />
-      </View>
+        <Toast /> {/* ✅ Ensure Toast is at the root level */}
+      </CartProvider>
     </UserProvider>
   );
 }
