@@ -69,20 +69,18 @@ exports.getProducts = async (req, res) => {
         if (!products || products.length === 0) {
             return res.status(404).json({
                 success: false,
-                message: 'No products found',
+                message: "No products found",
             });
         }
 
+        // Ensure correct image retrieval
         const productsWithImages = products.map(product => {
-            const imageUrl = cloudinary.url(product.image_public_id, {
-                width: 500,
-                height: 500,
-                crop: 'fill',
-            });
-            return { ...product.toObject(), image: imageUrl };
+            return {
+                ...product.toObject(),
+                image: product.images.length > 0 ? product.images[0].url : null, // ✅ Correctly gets the first image URL
+            };
         });
 
-        // Return products in response
         return res.status(200).json({
             success: true,
             products: productsWithImages,
@@ -94,6 +92,7 @@ exports.getProducts = async (req, res) => {
         });
     }
 };
+
 
 exports.getSingleProduct = async (req, res, next) => {
     try {
