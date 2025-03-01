@@ -38,7 +38,7 @@ export default function UserProfile() {
         }, 5000); // 5-second timeout
   
         const response = await axios.post(
-          "http://192.168.175.237:4000/api/auth/user",
+          "http://192.168.85.237:4000/api/auth/user",
           { token },
           { cancelToken: source.token }
         );

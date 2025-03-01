@@ -1,63 +1,62 @@
 const Product = require ('../models/product');
-const cloudinary = require('cloudinary');
+const cloudinary = require('cloudinary').v2;
 
-exports.newProduct = async (req, res) => {
+
+exports.newProduct = async (req, res, next) => {
     try {
-        console.log(req.files); // Debugging line
-        console.log(req.body); // Debugging line
+        console.log("Request Body:", req.body);
+        console.log("Uploaded Files:", req.files);
 
-        if (!req.files || !req.files.length) {
-            return res.status(400).json({
-                success: false,
-                message: 'No images provided',
-            });
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ success: false, message: "No images uploaded" });
         }
 
-        const { name, category, price, description } = req.body;
         let imagesLinks = [];
 
-        for (let i = 0; i < req.files.length; i++) {
-            try {
-                const result = await cloudinary.v2.uploader.upload(req.files[i].path, {
-                    folder: 'products',
-                    width: 150,
-                    crop: "scale",
-                });
+        // Function to upload image buffer to Cloudinary
+        const uploadImage = (fileBuffer) => {
+            return new Promise((resolve, reject) => {
+                const uploadStream = cloudinary.uploader.upload_stream(
+                    { folder: "products", width: 150, crop: "scale" },
+                    (error, result) => {
+                        if (error) {
+                            console.error("Cloudinary Upload Error:", error);
+                            reject(error);
+                        } else {
+                            resolve({
+                                public_id: result.public_id,
+                                url: result.secure_url,
+                            });
+                        }
+                    }
+                );
+                uploadStream.end(fileBuffer); // Send buffer to Cloudinary
+            });
+        };
 
-                imagesLinks.push({
-                    public_id: result.public_id,
-                    url: result.secure_url
-                });
+        // Upload all images
+        for (let file of req.files) {
+            try {
+                const uploadedImage = await uploadImage(file.buffer);
+                imagesLinks.push(uploadedImage);
             } catch (error) {
                 console.log(error);
-                return res.status(500).json({
-                    success: false,
-                    message: 'Image upload failed',
-                    error: error.message,
-                });
             }
         }
 
-        const product = new Product({
-            name,
-            category,
-            price,
-            description,
-            images: imagesLinks,
-            // user: req.user.id
-        });
+        req.body.images = imagesLinks;
+        // req.body.user = req.user.id;
 
-        await product.save();
+        const product = await Product.create(req.body);
 
-        return res.status(201).json({
-            success: true,
-            product,
-        });
+        if (!product) {
+            return res.status(400).json({ success: false, message: "Product not created" });
+        }
+
+        return res.status(201).json({ success: true, product });
     } catch (error) {
-        return res.status(400).json({ 
-            success: false,
-            message: error.message 
-        });
+        console.error(error);
+        return res.status(500).json({ success: false, message: "Server error" });
     }
 };
 

@@ -1,133 +1,166 @@
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Image,
-  StyleSheet,
-  ActivityIndicator,
-  ScrollView,
+    View,
+    TextInput,
+    TouchableOpacity,
+    Image,
+    Button,
+    StyleSheet,
+    Alert,
+    Text,
+    Platform,
+    ScrollView,
 } from "react-native";
-import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
-import Toast from "react-native-toast-message";
+import * as ImagePicker from "expo-image-picker";
+import RNPickerSelect from "react-native-picker-select";
 
-const AddProduct = () => {
-  const [productName, setProductName] = useState("");
-  const [category, setCategory] = useState("");
-  const [price, setPrice] = useState("");
-  const [description, setDescription] = useState("");
-  const [images, setImages] = useState([]);
-  const [loading, setLoading] = useState(false);
-
-  const pickImages = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
-      allowsEditing: true,
-      quality: 1,
+export default function AddProductScreen({ navigation }) {
+    const [product, setProduct] = useState({
+        name: "",
+        category: "Necklaces",
+        price: "",
+        description: "",
+        images: [],
     });
 
-    if (!result.canceled) {
-      setImages([...images, ...result.assets.map((asset) => asset.uri)]);
-    }
-  };
+    const categories = ["Necklaces", "Earrings", "Bracelets"];
 
-  const handleSubmit = async () => {
-    if (!productName || !category || !price || !description) {
-      Toast.show({
-        type: "error",
-        text1: "Validation Error",
-        text2: "Please fill all fields.",
-      });
-      return;
-    }
-
-    setLoading(true);
-    const formData = new FormData();
-    formData.append("name", productName);
-    formData.append("category", category);
-    formData.append("price", price);
-    formData.append("description", description);
-
-    images.forEach((image, index) => {
-      formData.append("images", {
-        uri: image,
-        name: `image${index}.jpg`,
-        type: "image/jpeg",
-      });
-    });
-
-    try {
-      const response = await axios.post(
-        "http://192.168.175.237:4000/api/auth/product/new",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+    // Function to pick an image from the gallery
+    const pickImage = async () => {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+            Alert.alert("Permission Denied", "You need to allow access to your photos.");
+            return;
         }
-      );
 
-      if (response.data.success) {
-        Toast.show({ type: "success", text1: "Success", text2: "Product added successfully!" });
-        setProductName("");
-        setCategory("");
-        setPrice("");
-        setDescription("");
-        setImages([]);
-      } else {
-        Toast.show({ type: "error", text1: "Error", text2: "Failed to add product." });
-      }
-    } catch (error) {
-      Toast.show({ type: "error", text1: "Error", text2: "Something went wrong." });
-    } finally {
-      setLoading(false);
-    }
-  };
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            aspect: [1, 1],
+            quality: 1,
+        });
 
-  return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.label}>Product Name</Text>
-      <TextInput style={styles.input} value={productName} onChangeText={setProductName} />
+        if (!result.canceled && result.assets?.length > 0) {
+            setProduct((prev) => ({
+                ...prev,
+                images: [...prev.images, result.assets[0]], // Store image URI
+            }));
+        } else {
+            Alert.alert("No image selected!");
+        }
+    };
 
-      <Text style={styles.label}>Category</Text>
-      <TextInput style={styles.input} value={category} onChangeText={setCategory} />
+    // Function to handle product submission
+    const handleAddProduct = async () => {
+        if (!product.name || !product.category || !product.price || !product.description) {
+            Alert.alert("Error", "All fields are required!");
+            return;
+        }
 
-      <Text style={styles.label}>Price</Text>
-      <TextInput style={styles.input} value={price} onChangeText={setPrice} keyboardType="numeric" />
+        if (product.images.length === 0) {
+            Alert.alert("Error", "Please select at least one image!");
+            return;
+        }
 
-      <Text style={styles.label}>Description</Text>
-      <TextInput style={styles.input} value={description} onChangeText={setDescription} multiline />
+        const formData = new FormData();
+        formData.append("name", product.name);
+        formData.append("category", product.category);
+        formData.append("price", product.price);
+        formData.append("description", product.description);
 
-      <TouchableOpacity style={styles.uploadButton} onPress={pickImages}>
-        <Text style={styles.buttonText}>Pick Images</Text>
-      </TouchableOpacity>
+        product.images.forEach((image, index) => {
+            let uri = image.uri;
+            let fileName = uri.split("/").pop();
+            let fileType = fileName.includes(".") ? fileName.split(".").pop() : "jpg";
 
-      <ScrollView horizontal>
-        {images.map((image, index) => (
-          <Image key={index} source={{ uri: image }} style={styles.imagePreview} />
-        ))}
-      </ScrollView>
+            formData.append("images", {
+                uri: Platform.OS === "android" ? uri : uri.replace("file://", ""), // Fix URI for Android
+                name: fileName,
+                type: `image/${fileType}`,
+            });
+        });
 
-      <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-        {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Add Product</Text>}
-      </TouchableOpacity>
+        try {
+            const response = await axios.post(
+                "http://192.168.85.237:4000/api/product/new",
+                formData,
+                {
+                    headers: {
+                        "Content-Type": "multipart/form-data",
+                    },
+                }
+            );
 
-      <Toast />
-    </ScrollView>
-  );
-};
+            Alert.alert("Success!", "Product added successfully.");
+            console.log("✅ Response:", response.data);
+
+            setProduct({
+                name: "",
+                category: "Necklaces",
+                price: "",
+                description: "",
+                images: [],
+            });
+        } catch (error) {
+            console.error("❌ Error adding product:", error.response?.data || error.message);
+            Alert.alert("Error", "Failed to add product. Check console for details.");
+        }
+    };
+
+    return (
+        <ScrollView contentContainerStyle={styles.container}>
+            <TextInput
+                style={styles.input}
+                placeholder="Product Name"
+                value={product.name}
+                onChangeText={(text) => setProduct({ ...product, name: text })}
+            />
+
+            <RNPickerSelect
+                onValueChange={(value) => setProduct({ ...product, category: value })}
+                items={categories.map((cat) => ({ label: cat, value: cat }))}
+                style={{
+                    inputIOS: styles.input,
+                    inputAndroid: styles.input,
+                }}
+                placeholder={{ label: "Select a category", value: null }}
+                value={product.category} // Ensure selected category is reflected
+            />
+
+            <TextInput
+                style={styles.input}
+                placeholder="Price"
+                keyboardType="numeric"
+                value={product.price}
+                onChangeText={(text) => setProduct({ ...product, price: text })}
+            />
+
+            <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Description"
+                multiline
+                value={product.description}
+                onChangeText={(text) => setProduct({ ...product, description: text })}
+            />
+
+            <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
+                <Text>Select Images</Text>
+            </TouchableOpacity>
+
+            {product.images.map((img, index) => (
+                <Image key={index} source={{ uri: img.uri }} style={styles.imagePreview} />
+            ))}
+
+            <Button title="Add Product" onPress={handleAddProduct} />
+        </ScrollView>
+    );
+}
 
 const styles = StyleSheet.create({
-  container: { padding: 20 },
-  label: { fontSize: 16, fontWeight: "bold", marginBottom: 5 },
-  input: { borderWidth: 1, padding: 10, marginBottom: 10, borderRadius: 5 },
-  uploadButton: { backgroundColor: "#f56a79", padding: 10, marginBottom: 10, alignItems: "center", borderRadius: 5 },
-  submitButton: { backgroundColor: "#28a745", padding: 15, alignItems: "center", borderRadius: 5 },
-  buttonText: { color: "#fff", fontWeight: "bold" },
-  imagePreview: { width: 80, height: 80, marginRight: 10, borderRadius: 5 },
+    container: { flexGrow: 1, padding: 20, justifyContent: "center" },
+    input: { borderWidth: 1, borderColor: "#ddd", padding: 10, marginBottom: 10, borderRadius: 5 },
+    textArea: { height: 100, textAlignVertical: "top" },
+    imagePicker: { padding: 10, backgroundColor: "#ddd", alignItems: "center", marginBottom: 10 },
+    imagePreview: { width: 100, height: 100, alignSelf: "center", marginBottom: 10, borderRadius: 10 },
 });
-
-export default AddProduct;
