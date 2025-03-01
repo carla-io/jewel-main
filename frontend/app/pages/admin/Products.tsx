@@ -1,166 +1,109 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-    View,
-    TextInput,
-    TouchableOpacity,
-    Image,
-    Button,
-    StyleSheet,
-    Alert,
-    Text,
-    Platform,
-    ScrollView,
+  View,
+  Text,
+  FlatList,
+  Image,
+  TouchableOpacity,
+  Alert,
+  StyleSheet,
+  Button,
 } from "react-native";
 import axios from "axios";
-import * as ImagePicker from "expo-image-picker";
-import RNPickerSelect from "react-native-picker-select";
+import { useRouter } from "expo-router"; // ✅ Use Expo Router
 
-export default function AddProductScreen({ navigation }) {
-    const [product, setProduct] = useState({
-        name: "",
-        category: "Necklaces",
-        price: "",
-        description: "",
-        images: [],
-    });
+const ProductListScreen = () => {
+  const [products, setProducts] = useState([]);
+  const router = useRouter(); // ✅ Use Expo Router
 
-    const categories = ["Necklaces", "Earrings", "Bracelets"];
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
-    // Function to pick an image from the gallery
-    const pickImage = async () => {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== "granted") {
-            Alert.alert("Permission Denied", "You need to allow access to your photos.");
-            return;
-        }
+  const fetchProducts = async () => {
+    try {
+      const response = await axios.get("http://192.168.85.237:4000/api/product/get");
+      console.log("Fetched Products:", response.data.products); // ✅ Debugging Step
+      setProducts(response.data.products); // ✅ Extract only the "products" array
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      Alert.alert("Error", "Failed to fetch products.");
+    }
+  };
+  
+  
 
-        const result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [1, 1],
-            quality: 1,
-        });
+  const handleDelete = async (id) => {
+    Alert.alert("Confirm Delete", "Are you sure you want to delete this product?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        onPress: async () => {
+          try {
+            await axios.delete(`http://192.168.85.237:4000/api/product/delete/${id}`);
+            Alert.alert("Success", "Product deleted successfully.");
+            fetchProducts(); // Refresh list
+          } catch (error) {
+            console.error("Error deleting product:", error);
+            Alert.alert("Error", "Failed to delete product.");
+          }
+        },
+      },
+    ]);
+  };
 
-        if (!result.canceled && result.assets?.length > 0) {
-            setProduct((prev) => ({
-                ...prev,
-                images: [...prev.images, result.assets[0]], // Store image URI
-            }));
-        } else {
-            Alert.alert("No image selected!");
-        }
-    };
+  const handleEdit = (productId) => {
+    router.push({ pathname: "/pages/admin/EditProduct", params: { productId } });
+  };
+  
 
-    // Function to handle product submission
-    const handleAddProduct = async () => {
-        if (!product.name || !product.category || !product.price || !product.description) {
-            Alert.alert("Error", "All fields are required!");
-            return;
-        }
+  return (
+    <View style={styles.container}>
+      <Button title="Add Product" onPress={() => router.push("/pages/admin/AddProduct")} /> {/* ✅ Fix Navigation */}
 
-        if (product.images.length === 0) {
-            Alert.alert("Error", "Please select at least one image!");
-            return;
-        }
+      <FlatList
+        data={products}
+        keyExtractor={(item) => item._id}
+        renderItem={({ item }) => (
+          <View style={styles.row}>
+            <Image 
+  source={{ uri: item.images?.[0]?.url || item.image || "https://via.placeholder.com/150" }} 
+  style={styles.image} 
+/>
 
-        const formData = new FormData();
-        formData.append("name", product.name);
-        formData.append("category", product.category);
-        formData.append("price", product.price);
-        formData.append("description", product.description);
+            <View style={styles.details}>
+              <Text style={styles.name}>{item.name}</Text>
+              <Text>Category: {item.category}</Text>
+              <Text>Price:  ₱{item.price}</Text>
+              <Text>Description: {item.description}</Text>
+            </View>
+            <View style={styles.actions}>
+            <TouchableOpacity onPress={() => handleEdit(item._id)} style={styles.editButton}>
+  <Text style={styles.actionText}>✏️ Edit</Text>
+</TouchableOpacity>
 
-        product.images.forEach((image, index) => {
-            let uri = image.uri;
-            let fileName = uri.split("/").pop();
-            let fileType = fileName.includes(".") ? fileName.split(".").pop() : "jpg";
 
-            formData.append("images", {
-                uri: Platform.OS === "android" ? uri : uri.replace("file://", ""), // Fix URI for Android
-                name: fileName,
-                type: `image/${fileType}`,
-            });
-        });
-
-        try {
-            const response = await axios.post(
-                "http://192.168.85.237:4000/api/product/new",
-                formData,
-                {
-                    headers: {
-                        "Content-Type": "multipart/form-data",
-                    },
-                }
-            );
-
-            Alert.alert("Success!", "Product added successfully.");
-            console.log("✅ Response:", response.data);
-
-            setProduct({
-                name: "",
-                category: "Necklaces",
-                price: "",
-                description: "",
-                images: [],
-            });
-        } catch (error) {
-            console.error("❌ Error adding product:", error.response?.data || error.message);
-            Alert.alert("Error", "Failed to add product. Check console for details.");
-        }
-    };
-
-    return (
-        <ScrollView contentContainerStyle={styles.container}>
-            <TextInput
-                style={styles.input}
-                placeholder="Product Name"
-                value={product.name}
-                onChangeText={(text) => setProduct({ ...product, name: text })}
-            />
-
-            <RNPickerSelect
-                onValueChange={(value) => setProduct({ ...product, category: value })}
-                items={categories.map((cat) => ({ label: cat, value: cat }))}
-                style={{
-                    inputIOS: styles.input,
-                    inputAndroid: styles.input,
-                }}
-                placeholder={{ label: "Select a category", value: null }}
-                value={product.category} // Ensure selected category is reflected
-            />
-
-            <TextInput
-                style={styles.input}
-                placeholder="Price"
-                keyboardType="numeric"
-                value={product.price}
-                onChangeText={(text) => setProduct({ ...product, price: text })}
-            />
-
-            <TextInput
-                style={[styles.input, styles.textArea]}
-                placeholder="Description"
-                multiline
-                value={product.description}
-                onChangeText={(text) => setProduct({ ...product, description: text })}
-            />
-
-            <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-                <Text>Select Images</Text>
-            </TouchableOpacity>
-
-            {product.images.map((img, index) => (
-                <Image key={index} source={{ uri: img.uri }} style={styles.imagePreview} />
-            ))}
-
-            <Button title="Add Product" onPress={handleAddProduct} />
-        </ScrollView>
-    );
-}
+              <TouchableOpacity onPress={() => handleDelete(item._id)} style={styles.deleteButton}>
+                <Text style={styles.actionText}>🗑️ Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      />
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
-    container: { flexGrow: 1, padding: 20, justifyContent: "center" },
-    input: { borderWidth: 1, borderColor: "#ddd", padding: 10, marginBottom: 10, borderRadius: 5 },
-    textArea: { height: 100, textAlignVertical: "top" },
-    imagePicker: { padding: 10, backgroundColor: "#ddd", alignItems: "center", marginBottom: 10 },
-    imagePreview: { width: 100, height: 100, alignSelf: "center", marginBottom: 10, borderRadius: 10 },
+  container: { flex: 1, padding: 10, backgroundColor: "#f8f8f8" },
+  row: { flexDirection: "row", backgroundColor: "#fff", padding: 10, marginBottom: 10, borderRadius: 8, alignItems: "center" },
+  image: { width: 60, height: 60, borderRadius: 8, marginRight: 10 },
+  details: { flex: 1 },
+  name: { fontSize: 16, fontWeight: "bold" },
+  actions: { flexDirection: "row" },
+  editButton: { backgroundColor: "#4CAF50", padding: 8, borderRadius: 5, marginRight: 5 },
+  deleteButton: { backgroundColor: "#E53935", padding: 8, borderRadius: 5 },
+  actionText: { color: "#fff", fontWeight: "bold" },
 });
+
+export default ProductListScreen;

@@ -127,59 +127,45 @@ exports.updateProduct = async (req, res) => {
 
         // Find the product by ID
         let product = await Product.findById(productId);
-
         if (!product) {
-            return res.status(404).json({
-                success: false,
-                message: 'Product not found'
-            });
+            return res.status(404).json({ success: false, message: 'Product not found' });
         }
 
-        // Step 1: Handle image updates if new images are provided
-        let images = product.images; // Keep the existing images if no new ones are provided
+        // ✅ Only update images if new ones are uploaded
         if (req.files && req.files.length > 0) {
-            // Clear existing images if new ones are uploaded
-            images = [];
+            // Clear old images
+            for (const image of product.images) {
+                await cloudinary.v2.uploader.destroy(image.public_id);
+            }
+            
+            product.images = []; // Reset images array
 
-            // Upload each new image to Cloudinary
             for (const file of req.files) {
                 const result = await cloudinary.v2.uploader.upload(file.path, {
                     folder: 'products',
                     crop: 'scale'
                 });
 
-                // Add the uploaded image to the images array
-                images.push({
-                    public_id: result.public_id,
-                    url: result.secure_url
-                });
+                product.images.push({ public_id: result.public_id, url: result.secure_url });
             }
         }
 
-        // Step 2: Update the product fields with the provided data
+        // Update fields
         product.name = name || product.name;
         product.price = price || product.price;
         product.description = description || product.description;
         product.category = category || product.category;
-        product.images = images; // Update images if provided
 
-        // Step 3: Save the updated product to the database
         await product.save();
 
-        return res.status(200).json({
-            success: true,
-            product
-        });
+        return res.status(200).json({ success: true, product });
 
     } catch (error) {
         console.error("Error during product update:", error);
-        res.status(500).json({
-            success: false,
-            message: 'Server Error',
-            error: error.message
-        });
+        res.status(500).json({ success: false, message: 'Server Error', error: error.message });
     }
 };
+
 
 
 exports.deleteProduct = async (req, res, next) => {

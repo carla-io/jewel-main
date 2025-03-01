@@ -4,7 +4,7 @@ import { Slot } from "expo-router";
 import Navbar from "../components/navbar";
 import { UserProvider } from "../context/UserContext";
 import { CartProvider } from "../context/CartContext";
-import Toast from "react-native-toast-message"; // ✅ Import Toast
+import Toast from "react-native-toast-message";
 
 export default function Layout() {
   return (
@@ -12,14 +12,12 @@ export default function Layout() {
       <CartProvider>
         <View style={styles.container}>
           <Navbar isUpperNavbar />
-
           <View style={styles.content}>
-            <Slot />
+            <Slot /> {/* Expo Router automatically handles navigation */}
           </View>
-
           <Navbar isLowerNavbar />
         </View>
-        <Toast /> {/* ✅ Ensure Toast is at the root level */}
+        <Toast />
       </CartProvider>
     </UserProvider>
   );
