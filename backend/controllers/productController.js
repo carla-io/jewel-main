@@ -120,51 +120,70 @@ exports.getSingleProduct = async (req, res, next) => {
     }
 };
 
-exports.updateProduct = async (req, res) => {
+
+
+exports.updateProduct = async (req, res, next) => {
     try {
-        const { name, price, description, category } = req.body;
-        const productId = req.params.id;
+        console.log("🔹 [START] Updating product...");
 
-        // Find the product by ID
-        let product = await Product.findById(productId);
+        let product = await Product.findById(req.params.id);
         if (!product) {
-            return res.status(404).json({ success: false, message: 'Product not found' });
+            return res.status(404).json({ success: false, message: "Product not found" });
+        }
+        console.log("✅ Product found:", product._id);
+
+        // ✅ Keep existing images
+        let updatedImages = [];
+        if (req.body.existingImages) {
+            updatedImages = Object.values(req.body.existingImages).map(img => ({
+                public_id: img.public_id,
+                url: img.url,
+            }));
         }
 
-        // ✅ Only update images if new ones are uploaded
+        // ✅ Upload new images
         if (req.files && req.files.length > 0) {
-            // Clear old images
-            for (const image of product.images) {
-                await cloudinary.v2.uploader.destroy(image.public_id);
-            }
-            
-            product.images = []; // Reset images array
+            console.log(`📤 Uploading ${req.files.length} new images...`);
 
-            for (const file of req.files) {
-                const result = await cloudinary.v2.uploader.upload(file.path, {
-                    folder: 'products',
-                    crop: 'scale'
+            const uploadImage = (fileBuffer) => {
+                return new Promise((resolve, reject) => {
+                    const uploadStream = cloudinary.uploader.upload_stream(
+                        { folder: "products", width: 150, crop: "scale" },
+                        (error, result) => {
+                            if (error) reject(error);
+                            else resolve({ public_id: result.public_id, url: result.secure_url });
+                        }
+                    );
+                    uploadStream.end(fileBuffer);
                 });
+            };
 
-                product.images.push({ public_id: result.public_id, url: result.secure_url });
+            const imageFiles = req.files;
+
+            for (let file of imageFiles) {
+                const uploadedImage = await uploadImage(file.buffer);
+                updatedImages.push(uploadedImage);
             }
         }
 
-        // Update fields
-        product.name = name || product.name;
-        product.price = price || product.price;
-        product.description = description || product.description;
-        product.category = category || product.category;
+        // ✅ Update product with new & existing images
+        product = await Product.findByIdAndUpdate(
+            req.params.id,
+            { ...req.body, images: updatedImages },
+            { new: true, runValidators: true, useFindAndModify: false }
+        );
 
-        await product.save();
-
+        console.log("✅ Product updated successfully:", product._id);
         return res.status(200).json({ success: true, product });
 
     } catch (error) {
-        console.error("Error during product update:", error);
-        res.status(500).json({ success: false, message: 'Server Error', error: error.message });
+        console.error("❌ Error updating product:", error);
+        return res.status(500).json({ success: false, message: "Server error while updating product" });
     }
 };
+
+
+
 
 
 

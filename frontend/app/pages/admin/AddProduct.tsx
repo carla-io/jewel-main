@@ -83,7 +83,7 @@ export default function AddProductScreen({ navigation }) {
 
         try {
             const response = await axios.post(
-                "http://192.168.85.237:4000/api/product/new",
+                "http://192.168.100.171:4000/api/product/new",
                 formData,
                 {
                     headers: {
