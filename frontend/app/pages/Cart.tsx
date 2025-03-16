@@ -2,9 +2,11 @@ import React, { useContext } from "react";
 import { View, Text, FlatList, Image, StyleSheet, TouchableOpacity } from "react-native";
 import { CartContext } from "../../context/CartContext";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router"; // ✅ Use expo-router
 
 export default function CartScreen() {
   const { cart, addToCart, decreaseQuantity, getTotalPrice } = useContext(CartContext);
+  const router = useRouter(); // ✅ Use useRouter instead of useNavigation
 
   return (
     <View style={styles.container}>
@@ -39,7 +41,7 @@ export default function CartScreen() {
 
                 {/* Total Price per Product */}
                 <Text style={styles.totalItemPrice}>
-                ₱{(item.price * item.quantity).toFixed(2)}
+                  ₱{(item.price * item.quantity).toFixed(2)}
                 </Text>
               </View>
             )}
@@ -48,6 +50,14 @@ export default function CartScreen() {
           {/* Total Price Section */}
           <View style={styles.totalContainer}>
             <Text style={styles.totalText}>Total: ₱{getTotalPrice()}</Text>
+
+            {/* ✅ Checkout Button */}
+            <TouchableOpacity
+              style={styles.checkoutButton}
+              onPress={() => router.push("/pages/Checkout")} // ✅ expo-router navigation
+            >
+              <Text style={styles.checkoutText}>Proceed to Checkout</Text>
+            </TouchableOpacity>
           </View>
         </>
       )}
@@ -86,4 +96,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   totalText: { fontSize: 18, fontWeight: "bold" },
+
+  /* ✅ Checkout Button Styles */
+  checkoutButton: {
+    backgroundColor: "#f56a79",
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 10,
+    width: "100%",
+    alignItems: "center",
+  },
+  checkoutText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
 });

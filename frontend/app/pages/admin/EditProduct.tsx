@@ -49,25 +49,61 @@ const EditProductScreen = () => {
     }
   };
 
-  const pickImages = async () => {
+  const pickOrCaptureImage = () => {
+    Alert.alert(
+        "Select Image",
+        "Choose an option",
+        [
+            { text: "📷 Take a Picture", onPress: captureImage },
+            { text: "🖼️ Choose from Gallery", onPress: pickImages },
+            { text: "Cancel", style: "cancel" },
+        ]
+    );
+};
+
+// Function to pick images from gallery
+const pickImages = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 1,
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
     });
 
     if (!result.canceled) {
-      console.log("Selected Images:", result.assets.map(asset => asset.uri));
-
-      setNewImages([...newImages, ...result.assets.map(asset => ({
-        uri: asset.uri,
-        name: `product_${Date.now()}.jpg`,
-        type: "image/jpeg"
-      }))]);
+        setNewImages([...newImages, ...result.assets.map(asset => ({
+            uri: asset.uri,
+            name: `product_${Date.now()}.jpg`,
+            type: "image/jpeg"
+        }))]);
     }
-  };
+};
+
+// Function to capture an image using the camera
+const captureImage = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+        Alert.alert("Permission Denied", "You need to allow camera access.");
+        return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 1,
+    });
+
+    if (!result.canceled) {
+        setNewImages([...newImages, {
+            uri: result.assets[0].uri,
+            name: `product_${Date.now()}.jpg`,
+            type: "image/jpeg"
+        }]);
+    }
+};
+
 
   const handleUpdate = async () => {
     const formData = new FormData();
@@ -120,9 +156,10 @@ const EditProductScreen = () => {
       </View>
 
       {/* Image Picker */}
-      <TouchableOpacity onPress={pickImages} style={styles.imageContainer}>
-        <Ionicons name="camera-outline" size={30} color="#fff" style={styles.cameraIcon} />
-      </TouchableOpacity>
+      <TouchableOpacity onPress={pickOrCaptureImage} style={styles.imageContainer}>
+    <Ionicons name="camera-outline" size={30} color="#fff" style={styles.cameraIcon} />
+</TouchableOpacity>
+
 
       <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Product Name" />
       <TextInput style={styles.input} value={price} onChangeText={setPrice} keyboardType="numeric" placeholder="Price" />

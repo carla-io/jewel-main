@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { 
-  View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator, TextInput 
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  TextInput,
+  Alert,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
@@ -9,7 +16,7 @@ import axios from "axios";
 import { useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import Toast from "react-native-toast-message";
-import { useCallback } from "react";
+import * as FileSystem from "expo-file-system"; // 🔥 Added for Expo Go compatibility
 
 export default function UserProfile() {
   const [profileImage, setProfileImage] = useState<string | null>(null);
@@ -23,99 +30,147 @@ export default function UserProfile() {
 
   useEffect(() => {
     const fetchUser = async () => {
-      setLoading(true); // Set loading state
+      setLoading(true);
       try {
         const token = await AsyncStorage.getItem("token");
         if (!token) {
           navigation.reset({ index: 0, routes: [{ name: "SignupScreen" }] });
           return;
         }
-  
-        // Set a timeout to prevent infinite waiting
-        const source = axios.CancelToken.source();
-        const timeout = setTimeout(() => {
-          source.cancel("Request timed out.");
-        }, 5000); // 5-second timeout
-  
+
         const response = await axios.post(
           "http://192.168.100.171:4000/api/auth/user",
-          { token },
-          { cancelToken: source.token }
+          { token }
         );
-  
-        clearTimeout(timeout); // Clear timeout when request succeeds
-  
+
         setUserName(response.data.user.username);
         setUserEmail(response.data.user.email);
         setProfileImage(response.data.user.profilePicture?.url || null);
         setUserId(response.data.user._id);
       } catch (err) {
-        if (axios.isCancel(err)) {
-          console.error("Request cancelled:", err.message);
-        } else {
-          Toast.show({ type: "error", text1: "Error", text2: "Failed to fetch user data" });
-        }
+        Toast.show({ type: "error", text1: "Error", text2: "Failed to fetch user data" });
       } finally {
         setLoading(false);
       }
     };
-  
+
     fetchUser();
   }, []);
 
+  const pickOrCaptureImage = () => {
+    Alert.alert("Select Image", "Choose an option", [
+      { text: "📷 Take a Picture", onPress: captureImage },
+      { text: "🖼️ Choose from Gallery", onPress: pickImage },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+  // Function to choose an image from the gallery
   const pickImage = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [1, 1],
       quality: 1,
-      base64: false,
     });
 
     if (!result.canceled) {
-      const imageUri = result.assets[0].uri;
-      setProfileImage(imageUri); 
-      setNewProfilePicture({ uri: imageUri, name: "profile.jpg", type: "image/jpeg" }); 
+      await handleImageResult(result.assets[0].uri);
     }
+  };
+
+  // Function to capture an image using the camera
+  const captureImage = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission Denied", "You need to allow camera access.");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      await handleImageResult(result.assets[0].uri);
+    }
+  };
+
+  // Handle image selection and convert to Expo-friendly format
+  const handleImageResult = async (uri: string) => {
+    const fileType = uri.split(".").pop() || "jpeg";
+    const fileName = `profile.${fileType}`;
+
+    // 🔥 Convert to a format Expo Go can handle
+    const fileInfo = await FileSystem.getInfoAsync(uri);
+    if (!fileInfo.exists) {
+      Alert.alert("Error", "Image file does not exist.");
+      return;
+    }
+
+    setProfileImage(uri);
+    setNewProfilePicture({
+      uri: fileInfo.uri,
+      name: fileName,
+      type: `image/${fileType}`,
+    });
   };
 
   const handleUpdateProfile = async () => {
     const token = await AsyncStorage.getItem("token");
     if (!token) {
-      Toast.show({ type: "error", text1: "Error", text2: "No authentication token found." });
-      return;
+        Toast.show({ type: "error", text1: "Error", text2: "No authentication token found." });
+        return;
     }
 
     if (!userId) {
-      Toast.show({ type: "error", text1: "Error", text2: "User ID not found." });
-      return;
+        Toast.show({ type: "error", text1: "Error", text2: "User ID not found." });
+        return;
     }
 
     const formData = new FormData();
     formData.append("username", userName);
     formData.append("email", userEmail);
+
     if (newProfilePicture) {
-      formData.append("profilePicture", newProfilePicture);
+        const localUri = newProfilePicture.uri;
+        const filename = localUri.split("/").pop();
+        const match = /\.(\w+)$/.exec(filename || "");
+        const fileType = match ? `image/${match[1]}` : "image/jpeg";
+
+        formData.append("profilePicture", {
+            uri: localUri,
+            name: filename || "profile.jpg",
+            type: fileType,
+        });
     }
+
+    console.log("🚀 Sending FormData:", [...formData.entries()]);
 
     try {
-      const response = await axios.put(
-        `http://192.168.100.171:4000/api/auth/update-profile/${userId}`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+        const response = await axios.put(
+            `http://192.168.100.171:4000/api/auth/update-profile/${userId}`,
+            formData,
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    "Content-Type": "multipart/form-data",
+                },
+            }
+        );
 
-      setProfileImage(`${response.data.user.profilePicture?.url}?t=${Date.now()}`);
-      Toast.show({ type: "success", text1: "Success", text2: "Profile updated successfully!" });
+        console.log("✅ Profile Updated:", response.data);
+        setProfileImage(`${response.data.user.profilePicture?.url}?t=${Date.now()}`);
+        Toast.show({ type: "success", text1: "Success", text2: "Profile updated successfully!" });
     } catch (err) {
-      Toast.show({ type: "error", text1: "Error", text2: "Failed to update profile." });
+        console.error("❌ Error during user profile update:", err.response?.data || err.message);
+        Toast.show({ type: "error", text1: "Error", text2: "Failed to update profile." });
     }
-  };
+};
+
 
   const handleLogout = async () => {
     await AsyncStorage.removeItem("user");
@@ -133,7 +188,7 @@ export default function UserProfile() {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity onPress={pickImage}>
+      <TouchableOpacity onPress={pickOrCaptureImage}>
         <View style={styles.imageContainer}>
           <Image
             source={{
@@ -145,20 +200,8 @@ export default function UserProfile() {
         </View>
       </TouchableOpacity>
 
-      <TextInput
-        style={styles.input}
-        value={userName}
-        onChangeText={setUserName}
-        placeholder="Enter your name"
-      />
-
-      <TextInput
-        style={styles.input}
-        value={userEmail}
-        onChangeText={setUserEmail}
-        placeholder="Enter your email"
-        keyboardType="email-address"
-      />
+      <TextInput style={styles.input} value={userName} onChangeText={setUserName} placeholder="Enter your name" />
+      <TextInput style={styles.input} value={userEmail} onChangeText={setUserEmail} placeholder="Enter your email" keyboardType="email-address" />
 
       <TouchableOpacity style={styles.updateButton} onPress={handleUpdateProfile}>
         <Text style={styles.updateButtonText}>Update Profile</Text>
@@ -168,11 +211,11 @@ export default function UserProfile() {
         <Text style={styles.logoutButtonText}>Logout</Text>
       </TouchableOpacity>
 
-      {/* Toast Notification Component */}
       <Toast />
     </View>
   );
 }
+
 
 const styles = StyleSheet.create({
   container: {

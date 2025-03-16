@@ -36,19 +36,54 @@ export default function AddProductScreen({ navigation }) {
 
         const result = await ImagePicker.launchImageLibraryAsync({
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
-            allowsEditing: true,
-            aspect: [1, 1],
+            allowsMultipleSelection: true,
             quality: 1,
         });
 
         if (!result.canceled && result.assets?.length > 0) {
             setProduct((prev) => ({
                 ...prev,
-                images: [...prev.images, result.assets[0]], // Store image URI
+                images: [...prev.images, ...result.assets],
             }));
         } else {
             Alert.alert("No image selected!");
         }
+    };
+
+    // Function to capture an image using the camera
+    const captureImage = async () => {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== "granted") {
+            Alert.alert("Permission Denied", "You need to allow camera access.");
+            return;
+        }
+
+        const result = await ImagePicker.launchCameraAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            quality: 1,
+        });
+
+        if (!result.canceled && result.assets?.length > 0) {
+            setProduct((prev) => ({
+                ...prev,
+                images: [...prev.images, ...result.assets],
+            }));
+        } else {
+            Alert.alert("No image captured!");
+        }
+    };
+
+    // Function to show options to the admin (Choose from Gallery or Take Picture)
+    const selectImage = () => {
+        Alert.alert(
+            "Select Image",
+            "Choose an option",
+            [
+                { text: "📷 Take a Picture", onPress: captureImage },
+                { text: "🖼️ Choose from Gallery", onPress: pickImage },
+                { text: "Cancel", style: "cancel" },
+            ]
+        );
     };
 
     // Function to handle product submission
@@ -74,9 +109,9 @@ export default function AddProductScreen({ navigation }) {
             let fileName = uri.split("/").pop();
             let fileType = fileName.includes(".") ? fileName.split(".").pop() : "jpg";
 
-            formData.append("images", {
-                uri: Platform.OS === "android" ? uri : uri.replace("file://", ""), // Fix URI for Android
-                name: fileName,
+            formData.append(`images`, {
+                uri: Platform.OS === "android" ? uri : uri.replace("file://", ""),
+                name: `product_image_${index}.${fileType}`,
                 type: `image/${fileType}`,
             });
         });
@@ -125,7 +160,7 @@ export default function AddProductScreen({ navigation }) {
                     inputAndroid: styles.input,
                 }}
                 placeholder={{ label: "Select a category", value: null }}
-                value={product.category} // Ensure selected category is reflected
+                value={product.category}
             />
 
             <TextInput
@@ -144,8 +179,8 @@ export default function AddProductScreen({ navigation }) {
                 onChangeText={(text) => setProduct({ ...product, description: text })}
             />
 
-            <TouchableOpacity style={styles.imagePicker} onPress={pickImage}>
-                <Text>Select Images</Text>
+            <TouchableOpacity style={styles.imagePicker} onPress={selectImage}>
+                <Text>Select Image</Text>
             </TouchableOpacity>
 
             {product.images.map((img, index) => (

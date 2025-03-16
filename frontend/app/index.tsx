@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useContext } from "react";
-import { View, Text, FlatList, Image, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from "react-native";
+import { View, Text, FlatList, Image, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, Dimensions } from "react-native";
 import axios from "axios";
 import { CartContext } from "../context/CartContext"; // Import Cart Context
 
@@ -38,14 +38,22 @@ export default function ProductList() {
 
   return (
     <View style={styles.container}>
+      {/* Category Filter */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScrollView}>
         {categories.map((category) => (
-          <TouchableOpacity key={category} style={[styles.categoryButton, selectedCategory === category && styles.selectedCategoryButton]} onPress={() => setSelectedCategory(category)}>
-            <Text style={[styles.categoryText, selectedCategory === category && styles.selectedCategoryText]}>{category}</Text>
+          <TouchableOpacity 
+            key={category} 
+            style={[styles.categoryButton, selectedCategory === category && styles.selectedCategoryButton]} 
+            onPress={() => setSelectedCategory(category)}
+          >
+            <Text style={[styles.categoryText, selectedCategory === category && styles.selectedCategoryText]}>
+              {category}
+            </Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
+      {/* Product List */}
       <FlatList
         data={filteredProducts}
         keyExtractor={(item, index) => index.toString()}
@@ -53,17 +61,27 @@ export default function ProductList() {
         columnWrapperStyle={styles.row}
         renderItem={({ item }) => (
           <View style={styles.productCard}>
-            <Image source={{ uri: item.image }} style={styles.productImage} />
+            
+            {/* ✅ Scrollable Images */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imageScrollView}>
+  {(Array.isArray(item.image) ? item.image : [item.image]).map((img, index) => (
+    img ? (
+      <Image key={index} source={{ uri: img }} style={styles.productImage} />
+    ) : null
+  ))}
+</ScrollView>
+
+
+
             <Text style={styles.productName}>{item.name}</Text>
             <Text style={styles.productCategory}>{item.category}</Text>
             <Text style={styles.productPrice}>₱{item.price}</Text>
             <TouchableOpacity 
-  style={styles.addToCartButton} 
-  onPress={() => addToCart({ ...item, id: item._id || item.id })} // ✅ Ensure unique id
->
-  <Text style={styles.addToCartText}>Add to Cart</Text>
-</TouchableOpacity>
-
+              style={styles.addToCartButton} 
+              onPress={() => addToCart({ ...item, id: item._id || item.id })}
+            >
+              <Text style={styles.addToCartText}>Add to Cart</Text>
+            </TouchableOpacity>
           </View>
         )}
       />
@@ -71,83 +89,85 @@ export default function ProductList() {
   );
 }
 
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: "#f9f9f9",
-    },
-    categoryContainer: {
-      flexDirection: "row",
-      paddingVertical: 10,
-      backgroundColor: "#fff",
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    categoryButton: {
-      width: 100, // Ensures uniform button width
-      height: 40, // Controls button height
-      borderRadius: 20, // Keeps a smooth round shape
-      backgroundColor: "#e0e0e0",
-      marginHorizontal: 5, // Proper spacing between buttons
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    selectedCategoryButton: {
-      backgroundColor: "#f56a79",
-    },
-    categoryText: {
-      fontSize: 14,
-      fontWeight: "bold",
-      color: "#333",
-      textAlign: "center",
-    },
-    selectedCategoryText: {
-      color: "#fff",
-    },
-    row: {
-      justifyContent: "space-between",
-      paddingHorizontal: 10,
-    },
-    productCard: {
-      backgroundColor: "#fff",
-      borderRadius: 10,
-      padding: 10,
-      margin: 10,
-      flex: 1,
-      alignItems: "center",
-      shadowColor: "#000",
-      shadowOpacity: 0.2,
-      shadowOffset: { width: 0, height: 2 },
-      shadowRadius: 4,
-      elevation: 3,
-    },
-    productImage: {
-      width: 100,
-      height: 100,
-      borderRadius: 10,
-    },
-    productName: {
-      fontSize: 16,
-      fontWeight: "bold",
-      marginTop: 5,
-    },
-    productCategory: {
-      fontSize: 14,
-      color: "gray",
-    },
-    productPrice: {
-      fontSize: 16,
-      color: "#28a745",
-      fontWeight: "bold",
-      marginVertical: 5,
-    },
-    addToCartButton: {
-      backgroundColor: "#f56a79",
-      padding: 8,
-      borderRadius: 5,
-    },
-    addToCartText: {
-      color: "#fff",
-      fontWeight: "bold",
-    },
-  });
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#f9f9f9",
+  },
+  categoryScrollView: {
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+  },
+  categoryButton: {
+    width: 100,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#e0e0e0",
+    marginHorizontal: 5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  selectedCategoryButton: {
+    backgroundColor: "#f56a79",
+  },
+  categoryText: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#333",
+    textAlign: "center",
+  },
+  selectedCategoryText: {
+    color: "#fff",
+  },
+  row: {
+    justifyContent: "space-between",
+    paddingHorizontal: 10,
+  },
+  productCard: {
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    padding: 10,
+    margin: 10,
+    flex: 1,
+    alignItems: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  imageScrollView: {
+    flexDirection: "row",
+  },
+  productImage: {
+    width: 120, 
+    height: 120,
+    borderRadius: 10,
+    marginHorizontal: 5, // Space between images
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    marginTop: 5,
+  },
+  productCategory: {
+    fontSize: 14,
+    color: "gray",
+  },
+  productPrice: {
+    fontSize: 16,
+    color: "#28a745",
+    fontWeight: "bold",
+    marginVertical: 5,
+  },
+  addToCartButton: {
+    backgroundColor: "#f56a79",
+    padding: 8,
+    borderRadius: 5,
+  },
+  addToCartText: {
+    color: "#fff",
+    fontWeight: "bold",
+  },
+});
+

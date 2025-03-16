@@ -160,19 +160,27 @@ const updateProfile = async (req, res) => {
 
         // Find the user
         const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ message: 'User not found' });
+        if (!user) return res.status(404).json({ message: "User not found" });
 
         // Update profile picture if provided
         let profilePicture = user.profilePicture;
+
         if (req.file) {
+            // Convert buffer to base64 for Cloudinary
+            const base64File = `data:${req.file.mimetype};base64,${req.file.buffer.toString("base64")}`;
+
+            // Delete old image if exists
             if (profilePicture?.public_id) {
                 await cloudinary.uploader.destroy(profilePicture.public_id);
             }
-            const result = await cloudinary.uploader.upload(req.file.path, {
-                folder: 'profile',
+
+            // Upload new image
+            const result = await cloudinary.uploader.upload(base64File, {
+                folder: "profile",
                 width: 150,
-                crop: 'scale',
+                crop: "scale",
             });
+
             profilePicture = { public_id: result.public_id, url: result.secure_url };
         }
 
@@ -186,10 +194,11 @@ const updateProfile = async (req, res) => {
 
         res.status(200).json({ success: true, user });
     } catch (error) {
-        console.error("Error during user profile update:", error);
-        res.status(500).json({ message: 'Server error', error: error.message });
+        console.error("❌ Error during user profile update:", error);
+        res.status(500).json({ message: "Server error", error: error.message });
     }
 };
+
 
 const verifyFirebaseToken = async (req, res, next) => {
     const token = req.headers.authorization?.split(' ')[1];  // Extract the token

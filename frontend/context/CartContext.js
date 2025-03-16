@@ -9,7 +9,18 @@ export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState([]);
 
   // Generate a unique cart key based on user ID
-  const getCartKey = () => (user ? `cart_${user.id}` : "cart_guest");
+  const getCartKey = () => {
+    return user && user.id ? `cart_${user.id}` : "cart_guest";
+  };
+
+
+useEffect(() => {
+  if (user === null) {
+    console.warn("User not found. Please log in again.");
+  } else {
+    loadCart();
+  }
+}, [user]);
 
   // Load cart from AsyncStorage
   const loadCart = async () => {
@@ -71,8 +82,9 @@ export const CartProvider = ({ children }) => {
 
   // Get total price
   const getTotalPrice = () => {
-    return cart.reduce((total, item) => total + item.price * item.quantity, 0).toFixed(2);
+    return cart.reduce((total, item) => total + item.price * item.quantity, 0);
   };
+  
 
   // Load cart when user changes
   useEffect(() => {
