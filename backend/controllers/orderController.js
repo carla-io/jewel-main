@@ -16,7 +16,7 @@ exports.createOrder = async (req, res) => {
 
         // ✅ Create order
         const newOrder = new Order({
-            user: userId,  // Ensure it matches your schema
+            user: userId,  // ✅ Ensure it uses "user", NOT "userId"
             orderItems,
             shippingInfo,
             itemsPrice,
@@ -26,6 +26,7 @@ exports.createOrder = async (req, res) => {
             modeOfPayment,
             orderStatus: "Processing",
         });
+        
 
         await newOrder.save();
 
@@ -41,9 +42,9 @@ exports.createOrder = async (req, res) => {
 exports.getAllOrders = async (req, res) => {
     try {
         const orders = await Order.find()
-            .populate('orderItems.product')   // Populating product details
-            .populate('userId', 'name email'); // Populating user details
-
+        .populate('orderItems.product')   
+        .populate('user', 'name email');  // ✅ Correct: "user" matches the schema
+     // Populating user details
         console.log('Fetched Orders:', orders); // Log the fetched orders to check
 
         if (!orders || orders.length === 0) {

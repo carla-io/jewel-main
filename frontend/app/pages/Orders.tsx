@@ -1,65 +1,85 @@
-import React, { useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, FlatList } from "react-native";
-
-const ordersData = [
-  { id: "1", title: "Order #1234", status: "To Ship" },
-  { id: "2", title: "Order #1235", status: "Shipped" },
-  { id: "3", title: "Order #1236", status: "Delivered" },
-  { id: "4", title: "Order #1237", status: "To Ship" },
-  { id: "5", title: "Order #1238", status: "Delivered" },
-];
+import React, { useEffect, useState } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator } from "react-native";
+import { useDispatch, useSelector } from "react-redux";
+import { fetchOrders } from "../../redux/slices/orderSlice";
+import { RootState, AppDispatch } from "../../redux/store";
 
 export default function OrdersScreen() {
-  const [selectedTab, setSelectedTab] = useState("To Ship");
+  const dispatch = useDispatch<AppDispatch>();
+  const { orders = [], status, error } = useSelector((state: RootState) => state.order); // Ensure orders is always an array
+  const [selectedTab, setSelectedTab] = useState("Processing");
 
-  const filteredOrders = ordersData.filter((order) => order.status === selectedTab);
+  useEffect(() => {
+    dispatch(fetchOrders());
+  }, [dispatch]);
+
+  useEffect(() => {
+    console.log("Orders from Redux:", orders);
+  }, [orders]);
+
+  // Filter orders based on selected status
+  const filteredOrders = orders.filter((order: any) => order.orderStatus === selectedTab);
+
+  useEffect(() => {
+    console.log("Filtered Orders:", filteredOrders);
+  }, [filteredOrders]);
 
   const renderOrderItem = ({ item }: { item: any }) => (
     <View style={styles.orderItem}>
-      <Text style={styles.orderTitle}>{item.title}</Text>
-      <Text style={styles.orderStatus}>{item.status}</Text>
+      <Text style={styles.orderTitle}>{`Order #${item._id}`}</Text>
+      <Text style={styles.orderStatus}>{`Status: ${item.orderStatus}`}</Text>
+
+      {/* Display Products */}
+      <Text style={styles.sectionTitle}>Products:</Text>
+      {item.orderItems.map((product: any, index: number) => (
+        <View key={index} style={styles.productItem}>
+          <Text>{`${product.name} (x${product.quantity})`}</Text>
+          <Text>{`₱${product.price.toFixed(2)}`}</Text>
+        </View>
+      ))}
+
+      {/* Total Price & Payment Mode */}
+      <Text style={styles.totalPrice}>{`Total Price: ₱${item.totalPrice.toFixed(2)}`}</Text>
+      <Text style={styles.paymentMethod}>{`Payment: ${item.modeOfPayment}`}</Text>
     </View>
   );
 
   return (
     <View style={styles.container}>
-      {/* Tab Selector */}
+      {/* Tabs */}
       <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tabButton, selectedTab === "To Ship" && styles.activeTab]}
-          onPress={() => setSelectedTab("To Ship")}
-        >
-          <Text style={[styles.tabText, selectedTab === "To Ship" && styles.activeTabText]}>
-            To Ship
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tabButton, selectedTab === "Shipped" && styles.activeTab]}
-          onPress={() => setSelectedTab("Shipped")}
-        >
-          <Text style={[styles.tabText, selectedTab === "Shipped" && styles.activeTabText]}>
-            Shipped
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.tabButton, selectedTab === "Delivered" && styles.activeTab]}
-          onPress={() => setSelectedTab("Delivered")}
-        >
-          <Text style={[styles.tabText, selectedTab === "Delivered" && styles.activeTabText]}>
-            Delivered
-          </Text>
-        </TouchableOpacity>
+        {[
+          { label: "To Ship", value: "Processing" },
+          { label: "Shipped", value: "Shipped" },
+          { label: "Delivered", value: "Delivered" },
+        ].map((tab) => (
+          <TouchableOpacity
+            key={tab.value}
+            style={[styles.tabButton, selectedTab === tab.value && styles.activeTab]}
+            onPress={() => setSelectedTab(tab.value)}
+          >
+            <Text style={[styles.tabText, selectedTab === tab.value && styles.activeTabText]}>
+              {tab.label}
+            </Text>
+          </TouchableOpacity>
+        ))}
       </View>
 
       {/* Orders List */}
-      <FlatList
-        data={filteredOrders}
-        renderItem={renderOrderItem}
-        keyExtractor={(item) => item.id}
-        ListEmptyComponent={<Text style={styles.emptyText}>No orders found.</Text>}
-      />
+      {status === "loading" ? (
+        <ActivityIndicator size="large" color="#f56a79" />
+      ) : error ? (
+        <Text style={styles.errorText}>
+          {typeof error === "string" ? error : JSON.stringify(error)}
+        </Text>
+      ) : (
+        <FlatList
+          data={filteredOrders}
+          renderItem={renderOrderItem}
+          keyExtractor={(item) => item._id}
+          ListEmptyComponent={filteredOrders.length === 0 ? <Text style={styles.emptyText}>No orders found.</Text> : null}
+        />
+      )}
     </View>
   );
 }
@@ -98,16 +118,39 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8f8f8",
     padding: 15,
     borderRadius: 8,
-    marginBottom: 10,
+    marginBottom: 15,
   },
   orderTitle: {
     fontSize: 16,
+    fontWeight: "bold",
     color: "#333",
   },
   orderStatus: {
     fontSize: 14,
     fontWeight: "bold",
     color: "#555",
+    marginBottom: 5,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "bold",
+    marginTop: 5,
+  },
+  productItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 2,
+  },
+  totalPrice: {
+    fontSize: 14,
+    fontWeight: "bold",
+    marginTop: 5,
+    color: "#f56a79",
+  },
+  paymentMethod: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#444",
   },
   emptyText: {
     fontSize: 16,
@@ -115,4 +158,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 20,
   },
+  errorText: {
+    color: "red",
+    textAlign: "center",
+    fontSize: 16,
+  },
 });
+
+export default OrdersScreen;
