@@ -1,15 +1,8 @@
-const admin = require('firebase-admin');
+const admin = require("firebase-admin");
+const serviceAccount = require("./serviceAccount.json");
 
-// Load Firebase service account credentials
-const serviceAccount = require('./serviceAccount.json'); // Replace with your actual file
-
-// Initialize Firebase Admin SDK
 admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    databaseURL: "https://jewelry-23dfd-default-rtdb.firebaseio.com/" // Replace with your Firebase project URL
+  credential: admin.credential.cert(serviceAccount),
 });
 
-
-const db = admin.firestore();
-
-module.exports = { db, auth };
+module.exports = admin;

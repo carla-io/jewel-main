@@ -4,83 +4,38 @@ const Product = require('../models/product');
 const User = require('../models/user'); // Ensure user validation
 
 exports.createOrder = async (req, res) => {
-    const { orderItems, shippingInfo, itemsPrice, taxPrice, shippingPrice, totalPrice, modeOfPayment, userId } = req.body;
-
-    if (!orderItems || orderItems.length === 0) {
-        return res.status(400).json({ message: 'No order items found' });
-    }
-    if (!userId) {
-        return res.status(400).json({ message: 'User ID is required' });
-    }
-
     try {
-        const userExists = await User.findById(userId);
-        if (!userExists) {
-            return res.status(404).json({ message: 'User not found' });
+        console.log("Request Body:", req.body);  // Debug userId issue
+
+        const { userId, orderItems, shippingInfo, itemsPrice, taxPrice, shippingPrice, totalPrice, modeOfPayment } = req.body;
+
+        // 🔴 Ensure `userId` is present before proceeding
+        if (!userId) {
+            return res.status(400).json({ success: false, message: "User ID is required" });
         }
 
-        if (!['COD', 'Online Payment'].includes(modeOfPayment)) {
-            return res.status(400).json({ message: 'Invalid mode of payment. Must be COD or Online Payment.' });
-        }
+        // ✅ Create order
+        const newOrder = new Order({
+            user: userId,  // Ensure it matches your schema
+            orderItems,
+            shippingInfo,
+            itemsPrice,
+            taxPrice,
+            shippingPrice,
+            totalPrice,
+            modeOfPayment,
+            orderStatus: "Processing",
+        });
 
-        const session = await mongoose.startSession();
-        session.startTransaction();
+        await newOrder.save();
 
-        try {
-            const bulkOps = [];
-
-            for (let item of orderItems) {
-                const product = await Product.findById(item.product).session(session);
-                if (!product) {
-                    await session.abortTransaction();
-                    return res.status(404).json({ message: `Product with ID ${item.product} not found.` });
-                }
-                if (product.stock < item.quantity) {
-                    await session.abortTransaction();
-                    return res.status(400).json({ message: `Insufficient stock for product ${product.name}.` });
-                }
-
-                bulkOps.push({
-                    updateOne: {
-                        filter: { _id: item.product },
-                        update: { $inc: { stock: -item.quantity } } // ✅ FIXED: Use $inc correctly
-                    }
-                });
-            }
-
-            const order = new Order({
-                userId,
-                orderItems,
-                shippingInfo,
-                modeOfPayment,
-                status: 'Processing',
-                itemsPrice,
-                taxPrice,
-                shippingPrice,
-                totalPrice
-            });
-
-            await order.save({ session });
-
-            if (bulkOps.length > 0) {
-                await Product.bulkWrite(bulkOps, { session }); // ✅ FIXED: Proper bulkWrite usage
-            }
-
-            await session.commitTransaction();
-            session.endSession();
-
-            res.status(201).json({ message: 'Order placed successfully', order });
-        } catch (error) {
-            await session.abortTransaction();
-            session.endSession();
-            console.error('Transaction error:', error);
-            res.status(500).json({ message: 'Order processing failed' });
-        }
+        return res.status(201).json({ success: true, message: "Order placed successfully!", order: newOrder });
     } catch (error) {
-        console.error('Error creating order:', error);
-        res.status(500).json({ message: 'Server error' });
+        console.error("Order creation failed:", error);
+        return res.status(500).json({ success: false, message: "Internal server error", error: error.message });
     }
 };
+
 
 
 exports.getAllOrders = async (req, res) => {

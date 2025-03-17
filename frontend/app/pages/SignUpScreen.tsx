@@ -4,6 +4,14 @@ import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useNavigation } from "@react-navigation/native";
+import * as WebBrowser from "expo-web-browser";
+import { useAuthRequest, makeRedirectUri } from "expo-auth-session";
+
+WebBrowser.maybeCompleteAuthSession();
+
+const GOOGLE_CLIENT_ID = "740216799410-uojjhmbufqumhisp275enpcdvlmbh1jt.apps.googleusercontent.com";
+const FACEBOOK_APP_ID = "1364898534515169";
 
 export default function SignUpScreen() {
   const router = useRouter();
@@ -11,8 +19,27 @@ export default function SignUpScreen() {
   const [user, setUser] = useState({ username: "", email: "", password: "" });
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const navigation = useNavigation();
+
+  const [request, response, promptAsync] = useAuthRequest(
+    {
+      clientId: GOOGLE_CLIENT_ID,
+      redirectUri: makeRedirectUri({ useProxy: true }),
+      scopes: ["profile", "email"],
+      responseType: "token",
+    },
+    { authorizationEndpoint: "https://accounts.google.com/o/oauth2/auth" }
+  );
 
   useEffect(() => {
+    if (response?.type === "success") {
+      handleGoogleAuth(response.params.access_token);
+    }
+  }, [response]);
+
+
+  useEffect(() => {
+    
     const requestPermissions = async () => {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
@@ -125,6 +152,40 @@ export default function SignUpScreen() {
     }
   };
 
+   const handleGoogleAuth = async (accessToken) => {
+    try {
+      const res = await axios.post("http://192.168.100.171:4000/api/auth/google", { access_token: accessToken });
+      await AsyncStorage.setItem("user", JSON.stringify(res.data.user));
+      await AsyncStorage.setItem("token", res.data.token);
+      router.replace("/pages/UserProfile");
+    } catch (error) {
+      console.error("Google Auth Error:", error);
+    }
+  };
+  
+  
+
+  const handleFacebookLogin = async () => {
+    try {
+      const redirectUri = AuthSession.makeRedirectUri();
+      const authUrl = `https://www.facebook.com/v12.0/dialog/oauth?client_id=${FACEBOOK_APP_ID}&redirect_uri=${redirectUri}&response_type=token&scope=email,public_profile`;
+
+      const result = await AuthSession.startAsync({ authUrl });
+
+      if (result.type === "success") {
+        const response = await axios.post("http://192.168.100.171:4000/api/auth/facebook", {
+          access_token: result.params.access_token,
+        });
+
+        await AsyncStorage.setItem("user", JSON.stringify(response.data.user));
+        await AsyncStorage.setItem("token", response.data.token);
+        router.replace("/pages/UserProfile");
+      }
+    } catch (error) {
+      console.error("Facebook Login Error:", error);
+    }
+  };
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{isRegistering ? "Sign Up" : "Login"}</Text>
@@ -160,9 +221,18 @@ export default function SignUpScreen() {
         onChangeText={(text) => setUser({ ...user, password: text })}
       />
       {error ? <Text style={styles.error}>{error}</Text> : null}
+
       <TouchableOpacity style={styles.button} onPress={handleSubmit}>
         <Text style={styles.buttonText}>{isRegistering ? "Sign Up" : "Login"}</Text>
       </TouchableOpacity>
+
+      <TouchableOpacity style={styles.googleButton} onPress={() => promptAsync()}><Text style={styles.buttonText}>Sign in with Google</Text></TouchableOpacity>
+
+      {/* Facebook Login Button */}
+      <TouchableOpacity style={styles.facebookButton} onPress={handleFacebookLogin}>
+        <Text style={styles.buttonText}>Sign in with Facebook</Text>
+      </TouchableOpacity>
+
       <TouchableOpacity onPress={() => setIsRegistering(!isRegistering)}>
         <Text style={styles.toggleText}>
           {isRegistering ? "Already have an account? Login" : "Don't have an account? Sign Up"}
@@ -230,5 +300,19 @@ const styles = StyleSheet.create({
     color: "#f56a79",
     textAlign: "center",
     marginTop: 15,
+  },
+  googleButton: {
+    backgroundColor: "#DB4437",
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 10,
+  },
+  facebookButton: {
+    backgroundColor: "#1877F2",
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 10,
   },
 });

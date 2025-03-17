@@ -10,17 +10,8 @@ export const CartProvider = ({ children }) => {
 
   // Generate a unique cart key based on user ID
   const getCartKey = () => {
-    return user && user.id ? `cart_${user.id}` : "cart_guest";
+    return user && (user._id || user.id) ? `cart_${user._id || user.id}` : "cart_guest";
   };
-
-
-useEffect(() => {
-  if (user === null) {
-    console.warn("User not found. Please log in again.");
-  } else {
-    loadCart();
-  }
-}, [user]);
 
   // Load cart from AsyncStorage
   const loadCart = async () => {
@@ -43,56 +34,64 @@ useEffect(() => {
     }
   };
 
+  const clearCart = async () => {
+    try {
+      const cartKey = getCartKey();
+      await AsyncStorage.removeItem(cartKey); // Clear AsyncStorage cart
+      setCart([]); // Clear cart state
+    } catch (error) {
+      console.error("Error clearing cart:", error);
+    }
+  };
+
+  // Load cart when user logs in
+  useEffect(() => {
+    if (!user) {
+      console.warn("User not found. Please log in again.");
+    } else {
+      loadCart();
+    }
+  }, [user]);
+
+  // Save cart when cart state changes
+  useEffect(() => {
+    saveCart(cart);
+  }, [cart]);
+
   // Add item to cart
   const addToCart = (item) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find((cartItem) => cartItem.id === item.id);
-      let updatedCart;
-
-      if (existingItem) {
-        updatedCart = prevCart.map((cartItem) =>
-          cartItem.id === item.id
-            ? { ...cartItem, quantity: cartItem.quantity + 1 }
-            : cartItem
-        );
-      } else {
-        updatedCart = [...prevCart, { ...item, quantity: 1 }];
-      }
-
-      saveCart(updatedCart);
-      return updatedCart;
+      return existingItem
+        ? prevCart.map((cartItem) =>
+            cartItem.id === item.id
+              ? { ...cartItem, quantity: cartItem.quantity + 1 }
+              : cartItem
+          )
+        : [...prevCart, { ...item, quantity: 1 }];
     });
   };
 
   // Decrease quantity or remove item
   const decreaseQuantity = (itemId) => {
-    setCart((prevCart) => {
-      const updatedCart = prevCart
+    setCart((prevCart) => 
+      prevCart
         .map((cartItem) =>
           cartItem.id === itemId
             ? { ...cartItem, quantity: cartItem.quantity - 1 }
             : cartItem
         )
-        .filter((cartItem) => cartItem.quantity > 0);
-
-      saveCart(updatedCart);
-      return updatedCart;
-    });
+        .filter((cartItem) => cartItem.quantity > 0)
+    );
   };
 
   // Get total price
   const getTotalPrice = () => {
     return cart.reduce((total, item) => total + item.price * item.quantity, 0);
   };
-  
-
-  // Load cart when user changes
-  useEffect(() => {
-    loadCart();
-  }, [user]);
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, decreaseQuantity, getTotalPrice }}>
+    <CartContext.Provider value={{ cart, addToCart, decreaseQuantity, getTotalPrice, clearCart, saveCart, loadCart,  }}>
       {children}
     </CartContext.Provider>
   );
