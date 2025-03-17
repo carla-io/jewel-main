@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, FlatList, ActivityIndicator, Image } from "react-native";
 import { useDispatch, useSelector } from "react-redux";
 import { fetchOrders } from "../../redux/slices/orderSlice";
 import { RootState, AppDispatch } from "../../redux/store";
 
 export default function OrdersScreen() {
   const dispatch = useDispatch<AppDispatch>();
-  const { orders = [], status, error } = useSelector((state: RootState) => state.order); // Ensure orders is always an array
+  const { orders = [], status, error } = useSelector((state: RootState) => state.order);
   const [selectedTab, setSelectedTab] = useState("Processing");
 
   useEffect(() => {
@@ -17,7 +17,6 @@ export default function OrdersScreen() {
     console.log("Orders from Redux:", orders);
   }, [orders]);
 
-  // Filter orders based on selected status
   const filteredOrders = orders.filter((order: any) => order.orderStatus === selectedTab);
 
   useEffect(() => {
@@ -33,8 +32,12 @@ export default function OrdersScreen() {
       <Text style={styles.sectionTitle}>Products:</Text>
       {item.orderItems.map((product: any, index: number) => (
         <View key={index} style={styles.productItem}>
-          <Text>{`${product.name} (x${product.quantity})`}</Text>
-          <Text>{`₱${product.price.toFixed(2)}`}</Text>
+          <Image source={{ uri: product.image }} style={styles.productImage} />
+          <View style={styles.productDetails}>
+            <Text style={styles.productName}>{product.name}</Text>
+            <Text style={styles.productQuantity}>{`Qty: ${product.quantity}`}</Text>
+            <Text style={styles.productPrice}>{`₱${product.price.toFixed(2)}`}</Text>
+          </View>
         </View>
       ))}
 
@@ -77,7 +80,9 @@ export default function OrdersScreen() {
           data={filteredOrders}
           renderItem={renderOrderItem}
           keyExtractor={(item) => item._id}
-          ListEmptyComponent={filteredOrders.length === 0 ? <Text style={styles.emptyText}>No orders found.</Text> : null}
+          ListEmptyComponent={
+            filteredOrders.length === 0 ? <Text style={styles.emptyText}>No orders found.</Text> : null
+          }
         />
       )}
     </View>
@@ -138,8 +143,38 @@ const styles = StyleSheet.create({
   },
   productItem: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    paddingVertical: 2,
+    alignItems: "center",
+    marginVertical: 5,
+    backgroundColor: "#fff",
+    padding: 8,
+    borderRadius: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+  },
+  productImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 8,
+    marginRight: 10,
+  },
+  productDetails: {
+    flex: 1,
+  },
+  productName: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  productQuantity: {
+    fontSize: 12,
+    color: "#555",
+  },
+  productPrice: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#f56a79",
   },
   totalPrice: {
     fontSize: 14,
